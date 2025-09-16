@@ -13,6 +13,10 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; }
         #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        /* --- TAMAÑO DE LOGO CORREGIDO --- */
+        #splash-screen img { max-width: 250px; margin-bottom: 2rem; }
+        #splash-screen h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        #splash-screen p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
         .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 20px 40px; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 8px; }
         #ar-container { width: 100%; height: 100%; position: relative; display: none; }
         #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -33,17 +37,27 @@
         .jewel-button { background-color: transparent; border: 3px solid #D5B488; border-radius: 12px; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer; background-size: contain; background-position: center; }
         .jewel-button.active { border-color: #FFFFFF; }
         
-        /* --- SELECTOR DE DEDO POLIGONAL --- */
+        /* --- SELECTOR DE DEDOS CON CÍRCULOS --- */
         #finger-selector-container { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 200px; height: 150px; }
         #hand-visual-selector { width: 100%; height: 100%; background-image: url('https://i.ibb.co/hFhNxZGD/Untitled-1-Photoroom.png'); background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: transform 0.4s ease; }
         #ui-container.ui-right #hand-visual-selector { transform: scaleX(-1); }
-        .finger-polygon-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        .finger-polygon { fill: transparent; cursor: pointer; }
-        .finger-polygon.active { fill: rgba(213, 180, 136, 0.4); }
+        .finger-hotspot { position: absolute; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s ease; width: 40px; height: 40px; }
+        .finger-hotspot.active { border-color: #D5B488; background-color: rgba(213, 180, 136, 0.3); }
+        /* Coordenadas precisas para los círculos */
+        .finger-hotspot[data-finger="thumb"]  { top: 90px; left: 15px; }
+        .finger-hotspot[data-finger="index"]  { top: 30px; left: 50px; }
+        .finger-hotspot[data-finger="middle"] { top: 10px; left: 85px; }
+        .finger-hotspot[data-finger="ring"]   { top: 25px; left: 120px; }
+        .finger-hotspot[data-finger="pinky"]  { top: 55px; left: 155px; }
     </style>
 </head>
 <body>
-    <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"/><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p><button id="start-button" class="cta-button">Empezar</button></div>
+    <div id="splash-screen">
+        <img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
+        <h1>Bienvenida</h1>
+        <p>Pruébate nuestras joyas virtualmente.</p>
+        <button id="start-button" class="cta-button">Empezar</button>
+    </div>
     <div id="ar-container">
         <video id="ar-video" playsinline autoplay muted></video>
         <canvas id="ar-canvas"></canvas>
@@ -52,13 +66,11 @@
             <div id="jewelry-selector-container" class="ui-element"><button id="toggle-jewelry-button" class="jewel-select-button">Joyas</button><div id="jewelry-carousel"></div></div>
             <div id="finger-selector-container" class="ui-element">
                 <div id="hand-visual-selector">
-                    <svg class="finger-polygon-svg" viewBox="0 0 200 150">
-                        <polygon class="finger-polygon" data-finger="thumb" points="0,98 42,125 60,105 38,72"/>
-                        <polygon class="finger-polygon" data-finger="index" points="56,30 58,72 82,72 80,26"/>
-                        <polygon class="finger-polygon" data-finger="middle" points="89,2 91,65 115,65 113,0"/>
-                        <polygon class="finger-polygon active" data-finger="ring" points="124,15 126,68 150,68 147,12"/>
-                        <polygon class="finger-polygon" data-finger="pinky" points="156,45 157,75 182,75 174,42"/>
-                    </svg>
+                    <div class="finger-hotspot" data-finger="thumb"></div>
+                    <div class="finger-hotspot" data-finger="index"></div>
+                    <div class="finger-hotspot" data-finger="middle"></div>
+                    <div class="finger-hotspot active" data-finger="ring"></div>
+                    <div class="finger-hotspot" data-finger="pinky"></div>
                 </div>
             </div>
         </div>
@@ -75,7 +87,7 @@
             elements.startButton.addEventListener('click', startArExperience);
             elements.flipButton.addEventListener('click', flipCamera);
             elements.toggleJewelryButton.addEventListener('click', () => elements.jewelryCarousel.classList.toggle('visible'));
-            document.querySelectorAll('.finger-polygon').forEach(button => {
+            document.querySelectorAll('.finger-hotspot').forEach(button => {
                 button.addEventListener('click', () => selectFinger(button.dataset.finger));
             });
         }
@@ -95,7 +107,7 @@
         function preloadJewelryImages() { for (const id in jewelryCatalog) { const jewel = jewelryCatalog[id]; jewel.image.crossOrigin = "anonymous"; jewel.image.src = jewel.imageUrl; jewel.image.onload = () => jewel.loaded = true; } }
         function populateJewelryCarousel() { let firstJewelId = Object.keys(jewelryCatalog)[0]; for (const id in jewelryCatalog) { const button = document.createElement('button'); button.className = 'jewel-button'; button.id = `jewel-btn-${id}`; button.style.backgroundImage = `url(${jewelryCatalog[id].imageUrl})`; button.onclick = () => selectJewel(id); elements.jewelryCarousel.appendChild(button); } if (firstJewelId) { selectJewel(firstJewelId); } }
         function selectJewel(id) { state.activeJewelId = id; document.querySelectorAll('.jewel-button').forEach(btn => btn.classList.remove('active')); document.getElementById(`jewel-btn-${id}`).classList.add('active'); }
-        function selectFinger(finger) { state.activeFinger = finger; document.querySelectorAll('.finger-polygon').forEach(f => f.classList.remove('active')); document.querySelector(`.finger-polygon[data-finger="${finger}"]`).classList.add('active'); }
+        function selectFinger(finger) { state.activeFinger = finger; document.querySelectorAll('.finger-hotspot').forEach(f => f.classList.remove('active')); document.querySelector(`.finger-hotspot[data-finger="${finger}"]`).classList.add('active'); }
         function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(); }
         async function setupCamera() { if (elements.video.srcObject) { elements.video.srcObject.getTracks().forEach(t => t.stop()); } const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: state.currentFacingMode } }); elements.video.srcObject = stream; await elements.video.play(); elements.canvas.width = elements.video.videoWidth; elements.canvas.height = elements.video.videoHeight; }
         async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return handPoseDetection.createDetector(model, config); }
