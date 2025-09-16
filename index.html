@@ -2,74 +2,94 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnóstico Final de Video</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Probador Virtual - Vernice</title>
+    
+    <link rel="icon" href="https://i.ibb.co/xp3QL7W/LOGOnegro-Original.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
+
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; }
-        #start-button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 25px 50px;
-            font-size: 1.8rem;
-            font-family: sans-serif;
-            cursor: pointer;
-            z-index: 10;
-        }
-        /* El video ahora será VISIBLE directamente */
-        #camera-video {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            /* Le aplicamos el efecto espejo directamente aquí */
-            transform: scaleX(-1);
-            display: none; /* Empezará oculto */
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; transition: opacity 0.5s ease-out; }
+        #splash-screen img { max-width: 250px; margin-bottom: 2rem; filter: drop-shadow(0 0 15px rgba(213, 180, 136, 0.7)); }
+        #splash-screen h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        #splash-screen p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
+        .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 15px 40px; font-family: 'Montserrat', sans-serif; font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; border-radius: 8px; }
+        #ar-container { width: 100%; height: 100%; position: relative; display: none; background-color: #181516; }
+        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        #ar-video { display: none; }
+        #flip-camera-button { position: absolute; top: 20px; right: 20px; z-index: 100; background-color: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+        .flip-camera-icon { background-color: rgba(24, 21, 22, 0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; }
+        #flip-camera-button:hover .flip-camera-icon { background-color: #D5B488; }
+        #flip-camera-button svg { width: 55%; height: 55%; fill: #D5B488; transition: fill 0.2s ease; }
+        #flip-camera-button:hover svg { fill: #181516; }
+        #flip-camera-button span { color: #FFFFFF; font-family: 'Montserrat', sans-serif; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        #jewelry-selector { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 100; background-color: rgba(24, 21, 22, 0.7); border: 1px solid #D5B488; border-radius: 12px; padding: 8px; }
+        .selector-button { background-color: transparent; border: none; color: #FFFFFF; font-family: 'Montserrat', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease-in-out; }
+        .selector-button.active { background-color: #D5B488; color: #181516; }
+        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 200; flex-direction: column; gap: 20px; }
+        .loading-spinner { width: 50px; height: 50px; border: 5px solid rgba(213, 180, 136, 0.3); border-top-color: #D5B488; border-radius: 50%; animation: spin 1s linear infinite; }
+        #loading-text { color: #FFFFFF; font-size: 1.2rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-    <button id="start-button">INICIAR DIAGNÓSTICO</button>
-    
-    <!-- Este es el único elemento que importa. No hay canvas. -->
-    <video id="camera-video" playsinline autoplay muted></video>
+    <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente con una experiencia en tiempo real.</p><button id="start-button" class="cta-button">Empezar</button></div>
+    <div id="ar-container"><div id="loading-overlay"><div class="loading-spinner"></div><span id="loading-text">Cargando IA...</span></div><button id="flip-camera-button" title="Cambiar cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div><span>Girar</span></button><div id="jewelry-selector"><button class="selector-button active" id="select-hand">Anillos</button><button class="selector-button" id="select-face">Collares</button></div><video id="ar-video" playsinline autoplay muted></video><canvas id="ar-canvas"></canvas></div>
 
     <script>
-        const startButton = document.getElementById('start-button');
-        const videoElement = document.getElementById('camera-video');
+        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), handButton: document.getElementById('select-hand'), faceButton: document.getElementById('select-face'), loadingOverlay: document.getElementById('loading-overlay'), watermark: new Image() };
+        const state = { handDetector: null, faceDetector: null, currentFacingMode: 'environment', activeDetectorType: 'hand', lastDetections: [], detectionInterval: null };
+        const VERNICE_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAbFBMVEUAAAD///8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB+B4XgpAAAAI3RSTlMA9wgJDPv19/f39/f39/f39/f39/f39/f19/f39wgJDAwz2ko+AAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAoNJREFUeJzt3e1y20AYBVGAlKCAiIsghxwhcIqE/v+XFRs1YAwJ5PTs2P1pWz3B6b2Z8A4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAALizc3p/sO/5m3O6n5GPhv/D4T3N6X4m3f5Q9f2s+TfCH3z5y/k/8g8JHyR8kPBBYgLhJ/z352+GfGTCByU+kPBBYgLhJ3z352+GfGTCByU+kPBBYgLhJ/z052+GfGTCByU+kPBBYgLhJ3z052+GfGTCByU+kPBBYgLhJ3zy52+GfGTCByU+kPBBYgLhJzz587dBPjLhgxIfSPggsYDwEx57/uYwZMIHJb6Q8EFiAeEnPPT8zWFIhA9KfCDhg8QCwk944PmbsxAhH5nwwYkPhJ8x4YMTn4oPEn5mwoeZ+Cjho5YPhJ8x4cNMfBTw0csHwk8Y8GGmPgr4aOWD8BEGPMzERwEf3Xwg/IABDzPxUcBDNx8IP2DAg0x8FPDQzQfCRxjwwJkIHyV88OFB+AgDHnwj4YOCRQg/Y8CDS0T4KOGDBQg/YsCDyUT4KOGjBgg/Y8CD+UT4KOGTBwg/Y8CD2UT4KOGTCAg/Y8CD6UT4KOGTCAg/YsCD2UT4KOGTCQg/YsCDmUT4KOGTDAg/YsCDmUT4aB0hfMQAB81mwoeZ+CDho3UI4SMcON1sJnyYCQ8k/EjjB8JnOHDCbCZ8mAkPJvyo/ED4CAcON5sJHybhQYQ/KT8QPsCBY81mwoeZ8GDCDy4fCB9gwLEmk/BhJjyY8IPLB8IHGHCsmQwfZsKDBx/4fCB8gAFHmkzCh5nwYMAPLh8IH2DAkWYyfZgJDyb8oPxA+AgHDjSb6cNM+DDhh5YPhJ9w4ECzGT/MhA8TfujyAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuNM/M60uQUYpxx0AAAAASUVORK5CYII=';
 
-        // Esta es la única acción en toda la página.
-        startButton.addEventListener('click', async () => {
-            console.log("Iniciando la prueba más simple posible...");
-            startButton.style.display = 'none';
-
-            // El video se hace visible.
-            videoElement.style.display = 'block';
-
-            try {
-                // 1. Pedimos la cámara.
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                console.log("Stream obtenido.");
-
-                // 2. Lo asignamos DIRECTAMENTE al elemento de video.
-                videoElement.srcObject = stream;
-                
-                // 3. Forzamos la reproducción por si acaso.
-                // Esta es la secuencia más directa posible.
-                videoElement.play();
-                console.log("Orden de 'play' enviada.");
-
-            } catch (error) {
-                console.error("DIAGNÓSTICO FALLIDO:", error);
-                alert(`Error definitivo: ${error.name} - ${error.message}`);
-                videoElement.style.display = 'none';
-                startButton.style.display = 'block';
-            }
+        const assetsReadyPromise = new Promise((resolve) => {
+            elements.watermark.src = VERNICE_LOGO_BASE64;
+            elements.watermark.onload = () => { console.log("Assets pre-cargados (logo)."); resolve(); };
         });
+
+        function initializeEventListeners() {
+            elements.startButton.addEventListener('click', startArExperience);
+            elements.flipButton.addEventListener('click', flipCamera);
+            elements.handButton.addEventListener('click', () => switchDetector('hand'));
+            elements.faceButton.addEventListener('click', () => switchDetector('face'));
+            console.log("Listeners de la UI activados.");
+        }
+
+        async function startArExperience() {
+            console.log("Botón 'Empezar' detectado. Iniciando secuencia...");
+            await assetsReadyPromise; 
+            console.log("Assets listos. Procediendo...");
+            
+            elements.splashScreen.style.opacity = '0';
+            setTimeout(() => elements.splashScreen.style.display = 'none', 500);
+            elements.arContainer.style.display = 'block';
+
+            await setupCamera(state.currentFacingMode);
+            await switchDetector('hand');
+            renderLoop();
+        }
+        
+        function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(state.currentFacingMode); }
+        async function switchDetector(type) { if (state.detectionInterval) clearInterval(state.detectionInterval); state.activeDetectorType = type; state.lastDetections = []; elements.handButton.classList.toggle('active', type === 'hand'); elements.faceButton.classList.toggle('active', type === 'face'); try { if (type === 'hand' && !state.handDetector) { elements.loadingOverlay.style.display = 'flex'; state.handDetector = await createHandDetector(); } else if (type === 'face' && !state.faceDetector) { elements.loadingOverlay.style.display = 'flex'; state.faceDetector = await createFaceDetector(); } } catch (error) { console.error(`Error al cargar detector ${type}:`, error); } finally { elements.loadingOverlay.style.display = 'none'; } state.detectionInterval = setInterval(detect, 100); }
+        async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; const detector = await handPoseDetection.createDetector(model, detectorConfig); return detector; }
+        async function createFaceDetector() { const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh' }; const detector = await faceLandmarksDetection.createDetector(model, detectorConfig); return detector; }
+        async function setupCamera(facingMode) { try { if (elements.video.srcObject) { elements.video.srcObject.getTracks().forEach(t => t.stop()); } const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } }); elements.video.srcObject = stream; await elements.video.play(); const { videoWidth, videoHeight } = elements.video; elements.canvas.width = videoWidth; elements.canvas.height = videoHeight; elements.canvas.style.transform = (facingMode === 'user') ? 'scaleX(-1)' : 'scaleX(1)'; } catch (error) { console.error("Error de cámara:", error); } }
+        async function detect() { if (elements.video.paused || elements.video.ended || elements.video.readyState < 4) return; let detections = []; const detector = state.activeDetectorType === 'hand' ? state.handDetector : state.faceDetector; if (!detector) return; if (state.activeDetectorType === 'hand') { detections = await detector.estimateHands(elements.video); } else { detections = await detector.estimateFaces(elements.video); } state.lastDetections = detections; }
+        function renderLoop() { elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height); elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height); drawWatermark(); if (state.lastDetections.length > 0) { if (state.activeDetectorType === 'hand') drawHandLandmarks(state.lastDetections); else if (state.activeDetectorType === 'face') drawFaceLandmarks(state.lastDetections); } requestAnimationFrame(renderLoop); }
+        function drawWatermark() { if (!elements.watermark.complete || elements.watermark.naturalWidth === 0) { return; } const size = Math.min(elements.canvas.width, elements.canvas.height) * 0.08; const padding = 20; elements.ctx.save(); elements.ctx.globalAlpha = 0.6; if (state.currentFacingMode === 'user') { elements.ctx.scale(-1, 1); elements.ctx.drawImage(elements.watermark, -size - padding, padding, size, size); } else { elements.ctx.drawImage(elements.watermark, padding, padding, size, size); } elements.ctx.restore(); }
+        function drawHandLandmarks(hands) { for (const hand of hands) { for (const kp of hand.keypoints) { elements.ctx.fillStyle = '#D5B488'; elements.ctx.beginPath(); elements.ctx.arc(kp.x, kp.y, 5, 0, 2*Math.PI); elements.ctx.fill(); } } }
+        function drawFaceLandmarks(faces) { const p = [172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397]; for (const face of faces) { for (const i of p) { const k = face.keypoints[i]; elements.ctx.fillStyle = '#FFFFFF'; elements.ctx.beginPath(); elements.ctx.arc(k.x, k.y, 4, 0, 2*Math.PI); elements.ctx.fill(); } } }
+        
+        initializeEventListeners();
     </script>
 </body>
 </html>
