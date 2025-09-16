@@ -6,6 +6,10 @@
     <title>Probador Virtual - Vernice</title>
     <link rel="icon" href="https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; }
         #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
@@ -32,51 +36,83 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const elements = {
-            splashScreen: document.getElementById('splash-screen'),
-            startButton: document.getElementById('start-button'),
-            arContainer: document.getElementById('ar-container'),
-            video: document.getElementById('ar-video'),
-            canvas: document.getElementById('ar-canvas'),
-            ctx: document.getElementById('ar-canvas').getContext('2d')
-        };
+        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d') };
+        let state = { handDetector: null, lastDetections: [], detectionInterval: null, ringImage: new Image(), ringLoaded: false };
 
-        elements.startButton.addEventListener('click', async () => {
+        function initializeApp() {
+            state.ringImage.crossOrigin = "anonymous";
+            state.ringImage.src = 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png';
+            state.ringImage.onload = () => { state.ringLoaded = true; };
+            elements.startButton.addEventListener('click', startArExperience);
+        }
+
+        async function startArExperience() {
             elements.splashScreen.style.display = 'none';
             elements.arContainer.style.display = 'block';
-
             try {
                 await setupCamera();
-                renderLoop();
-                alert("Misión 2 Completada: La cámara funciona. Ahora añadiremos la IA.");
+                state.handDetector = await createHandDetector();
+                state.detectionInterval = setInterval(detect, 100); // Bucle de IA
+                renderLoop(); // Bucle de Dibujo
+                alert("Misión 3 Completada: La IA está activa. Muestra tu mano a la cámara.");
             } catch(error) {
-                alert("Fallo al iniciar la cámara: " + error.message);
-                elements.splashScreen.style.display = 'flex';
-                elements.arContainer.style.display = 'none';
+                alert("Fallo al iniciar la IA o la cámara: " + error.message);
+                // Aquí podrías añadir lógica para volver al inicio si falla
             }
-        });
+        }
 
         async function setupCamera() {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             elements.video.srcObject = stream;
             await elements.video.play();
             elements.canvas.width = elements.video.videoWidth;
             elements.canvas.height = elements.video.videoHeight;
         }
 
+        async function createHandDetector() {
+            const model = handPoseDetection.SupportedModels.MediaPipeHands;
+            const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' };
+            return handPoseDetection.createDetector(model, config);
+        }
+
+        async function detect() {
+            if (elements.video.paused || !state.handDetector) return;
+            state.lastDetections = await state.handDetector.estimateHands(elements.video);
+        }
+
         function renderLoop() {
             elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
-            elements.ctx.save();
-            // Lógica simple para efecto espejo si es cámara frontal
-            if (elements.video.srcObject.getVideoTracks()[0].getSettings().facingMode !== 'environment') {
-                elements.ctx.scale(-1, 1);
-                elements.ctx.drawImage(elements.video, -elements.canvas.width, 0, elements.canvas.width, elements.canvas.height);
-            } else {
-                elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height);
+            elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height);
+            if (state.lastDetections.length > 0) {
+                drawRing(state.lastDetections);
             }
-            elements.ctx.restore();
             requestAnimationFrame(renderLoop);
         }
+        
+        function drawRing(hands) {
+            if (!state.ringLoaded) return;
+            for (const hand of hands) {
+                // Usamos el dedo anular (puntos 13 y 14)
+                const p1 = hand.keypoints[13];
+                const p2 = hand.keypoints[14];
+                if (!p1 || !p2) continue;
+
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
+                const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+                const ringWidth = fingerWidth * 0.85;
+                const ringHeight = ringWidth * (state.ringImage.height / state.ringImage.width);
+                const midX = (p1.x + p2.x) / 2;
+                const midY = (p1.y + p2.y) / 2;
+                
+                elements.ctx.save();
+                elements.ctx.translate(midX, midY);
+                elements.ctx.rotate(angle);
+                elements.ctx.drawImage(state.ringImage, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
+                elements.ctx.restore();
+            }
+        }
+
+        initializeApp();
     });
     </script>
 </body>
