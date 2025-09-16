@@ -14,155 +14,181 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
 
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; -webkit-tap-highlight-color: transparent; }
-        #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; transition: opacity 0.5s ease-out; }
-        #splash-screen img { max-width: 250px; margin-bottom: 2rem; filter: drop-shadow(0 0 15px rgba(213, 180, 136, 0.7)); }
-        #splash-screen h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-        #splash-screen p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
-        .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 15px 40px; font-family: 'Montserrat', sans-serif; font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; border-radius: 8px; }
-        #ar-container { width: 100%; height: 100%; position: relative; display: none; background-color: #181516; }
+        #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 20px 40px; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 8px; }
+        #ar-container { width: 100%; height: 100%; position: relative; display: none; }
         #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         #ar-video { display: none; }
-        #flip-camera-button { position: absolute; top: 20px; right: 20px; z-index: 100; background-color: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+        #flip-camera-button { position: absolute; top: 20px; right: 20px; z-index: 110; background-color: transparent; border: none; cursor: pointer; }
         .flip-camera-icon { background-color: rgba(24, 21, 22, 0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; }
         #flip-camera-button:hover .flip-camera-icon { background-color: #D5B488; }
         #flip-camera-button svg { width: 55%; height: 55%; fill: #D5B488; transition: fill 0.2s ease; }
         #flip-camera-button:hover svg { fill: #181516; }
-        #flip-camera-button span { color: #FFFFFF; font-family: 'Montserrat', sans-serif; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-        #main-selector { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 100; background-color: rgba(24, 21, 22, 0.7); border: 1px solid #D5B488; border-radius: 12px; padding: 8px; }
-        .selector-button { background-color: transparent; border: none; color: #FFFFFF; font-family: 'Montserrat', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease-in-out; }
-        .selector-button.active { background-color: #D5B488; color: #181516; }
-        #loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 200; flex-direction: column; gap: 20px; }
-        .loading-spinner { width: 50px; height: 50px; border: 5px solid rgba(213, 180, 136, 0.3); border-top-color: #D5B488; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #ui-bottom-container { position: absolute; bottom: 20px; left: 0; width: 100%; display: none; flex-direction: column; align-items: center; gap: 15px; z-index: 110; }
-        #jewelry-carousel-container { width: 100%; }
-        #jewelry-carousel { display: flex; gap: 15px; padding: 0 20px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        
+        #ui-bottom-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; justify-content: center; align-items: center; }
+        #finger-selector { display: flex; background-color: rgba(24, 21, 22, 0.8); border-radius: 15px; padding: 10px; }
+        .finger-button { background: none; border: none; padding: 5px; cursor: pointer; }
+        .finger-button svg { width: 45px; height: 60px; transition: transform 0.2s ease; }
+        .finger-button:hover svg { transform: scale(1.1); }
+        .finger-button .finger-shape { fill: #5c5c5c; transition: fill 0.2s ease; }
+        .finger-button.active .finger-shape { fill: #D5B488; }
+        
+        #jewelry-selector-container { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); z-index: 100; }
+        .jewel-select-button { background-color: rgba(24, 21, 22, 0.8); border: 2px solid #D5B488; color: #D5B488; font-family: 'Montserrat', sans-serif; font-weight: 700; text-transform: uppercase; border-radius: 12px; padding: 10px 15px; font-size: 0.9rem; cursor: pointer; }
+        
+        /* --- VITRINA DESPLEGABLE --- */
+        #jewelry-carousel {
+            background-color: rgba(24, 21, 22, 0.8);
+            border: 1px solid #D5B488;
+            border-radius: 12px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: absolute;
+            left: 20px;
+            top: calc(50% - 115px); /* Se alinea con el botón, ajusta este valor si es necesario */
+            max-height: 230px;
+            overflow-y: auto;
+            scrollbar-width: none; -ms-overflow-style: none;
+            
+            /* Animación */
+            transform: translateX(-120%);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            pointer-events: none; /* No se puede hacer clic cuando está oculto */
+        }
+        #jewelry-carousel.visible {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: all;
+        }
         #jewelry-carousel::-webkit-scrollbar { display: none; }
-        .jewel-button { background-color: rgba(24, 21, 22, 0.7); border: 3px solid #D5B488; border-radius: 12px; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer; background-size: contain; background-position: center; background-repeat: no-repeat; transition: all 0.2s ease; }
+        .jewel-button { background-color: transparent; border: 3px solid #D5B488; border-radius: 12px; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer; background-size: contain; background-position: center; background-repeat: no-repeat; transition: all 0.2s ease; }
         .jewel-button.active { border-color: #FFFFFF; transform: scale(1.1); }
-        #finger-selector { display: flex; gap: 10px; background-color: rgba(24, 21, 22, 0.7); border: 1px solid #D5B488; border-radius: 12px; padding: 8px; }
-        .finger-button { background: transparent; border: 2px solid transparent; padding: 5px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; }
-        .finger-button svg { width: 20px; height: 35px; fill: #D5B488; }
-        .finger-button.active { border-color: #D5B488; }
     </style>
 </head>
 <body>
-    <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente con una experiencia en tiempo real.</p><button id="start-button" class="cta-button">Empezar</button></div>
+    <div id="splash-screen"><button id="start-button" class="cta-button">Empezar</button></div>
     <div id="ar-container">
-        <div id="loading-overlay"><div class="loading-spinner"></div></div>
-        <button id="flip-camera-button" title="Cambiar cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div><span>Girar</span></button>
-        <div id="main-selector"><button class="selector-button active" id="select-hand">Anillos</button><button class="selector-button" id="select-face">Collares</button></div>
-        <div id="ui-bottom-container">
-            <div id="finger-selector">
-                <button class="finger-button" data-finger="index" title="Dedo Índice"><svg viewBox="0 0 24 24"><path d="M7,15.2V8.8C7,8.2,7.4,7.8,8,7.8h0c0.6,0,1,0.4,1,1v5.6c0,0.6-0.4,1-1,1h0C7.4,16.2,7,15.8,7,15.2z"/></svg></button>
-                <button class="finger-button" data-finger="middle" title="Dedo Corazón"><svg viewBox="0 0 24 24"><path d="M12,6.8V16c0,0.6-0.4,1-1,1h0c-0.6,0-1-0.4,1-1V7.6c0-0.6,0.4-1,1-1h0C11.6,6.6,12,7.2,12,6.8z"/></svg></button>
-                <button class="finger-button active" data-finger="ring" title="Dedo Anular"><svg viewBox="0 0 24 24"><path d="M17,9.8v5.4c0,0.6-0.4,1-1,1h0c-0.6,0-1-0.4,1-1V10c0-0.6,0.4-1,1-1h0C16.6,9,17,9.4,17,9.8z"/></svg></button>
-            </div>
-            <div id="jewelry-carousel-container"><div id="jewelry-carousel"></div></div>
+        <video id="ar-video" playsinline autoplay muted></video>
+        <canvas id="ar-canvas"></canvas>
+        <button id="flip-camera-button" title="Girar Cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div></button>
+        
+        <div id="jewelry-selector-container">
+            <button id="toggle-jewelry-button" class="jewel-select-button">Joyas</button>
+            <div id="jewelry-carousel"></div>
         </div>
-        <video id="ar-video" playsinline autoplay muted></video><canvas id="ar-canvas"></canvas>
+
+        <div id="ui-bottom-bar">
+            <div id="finger-selector">
+                <button class="finger-button" data-finger="index" title="Índice"><svg viewBox="0 0 120 160"><path class="finger-shape" d="M52,112.7V42.5c0-4.6,3.8-8.4,8.4-8.4h0c4.6,0,8.4,3.8,8.4,8.4v68.9c0,4.6-3.8,8.4-8.4,8.4h0 C55.8,121.1,52,117.3,52,112.7z"/></svg></button>
+                <button class="finger-button" data-finger="middle" title="Corazón"><svg viewBox="0 0 120 160"><path class="finger-shape" d="M78.4,14.7v83.4c0,4.6-3.8,8.4-8.4,8.4h-0.1c-4.6,0-8.4-3.8-8.4-8.4V16c0-4.6,3.8-8.4,8.4-8.4h0.1 C74.6,7.6,78.4,11.4,78.4,14.7z"/></svg></button>
+                <button class="finger-button active" data-finger="ring" title="Anular"><svg viewBox="0 0 120 160"><path class="finger-shape" d="M104.9,46.7v51.5c0,4.6-3.8,8.4-8.4,8.4h0c-4.6,0-8.4-3.8-8.4-8.4V48.1c0-4.6,3.8-8.4,8.4-8.4h0 C101.1,39.7,104.9,43.5,104.9,46.7z"/></svg></button>
+            </div>
+        </div>
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), handButton: document.getElementById('select-hand'), faceButton: document.getElementById('select-face'), loadingOverlay: document.getElementById('loading-overlay'), watermark: new Image(), uiBottomContainer: document.getElementById('ui-bottom-container'), jewelryCarousel: document.getElementById('jewelry-carousel'), fingerSelector: document.getElementById('finger-selector'), mainSelector: document.getElementById('main-selector') };
-        const state = { handDetector: null, faceDetector: null, currentFacingMode: 'environment', activeDetectorType: 'hand', activeJewelId: null, activeFinger: 'ring', lastDetections: [], detectionInterval: null };
+        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), toggleJewelryButton: document.getElementById('toggle-jewelry-button'), jewelryCarousel: document.getElementById('jewelry-carousel') };
+        const state = { handDetector: null, currentFacingMode: 'environment', activeFinger: 'ring', activeJewelId: null, lastDetections: [], detectionInterval: null };
         
-        const VERNICE_LOGO_URL = 'https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png';
         const jewelryCatalog = {
-            'ring-1': { type: 'hand', imageUrl: 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png', image: new Image(), loaded: false, scale: 0.85 },
-            'ring-2': { type: 'hand', imageUrl: 'https://i.ibb.co/XDrw3vc/anillo-plata-2.png', image: new Image(), loaded: false, scale: 1.1 },
-            'ring-3': { type: 'hand', imageUrl: 'https://i.ibb.co/R9g665m/anillo-plata-3.png', image: new Image(), loaded: false, scale: 1.0 }
+            'ring-1': { imageUrl: 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png', image: new Image(), loaded: false, scale: 0.85 },
+            'ring-2': { imageUrl: 'https://i.ibb.co/TxVp1Ck4/Montura-Tiffany6unas2aguas1-8mm-r.png', image: new Image(), loaded: false, scale: 0.9 },
+            'ring-3': { imageUrl: 'https://i.ibb.co/8Dwj5YkY/Tiffanypave0-03-rosa-round0-50-S.png', image: new Image(), loaded: false, scale: 1.0 }
         };
         const fingerMap = { index: 5, middle: 9, ring: 13 };
-        const assetsReadyPromise = new Promise((resolve) => { elements.watermark.src = VERNICE_LOGO_URL; elements.watermark.onload = () => resolve(); elements.watermark.onerror = () => resolve(); });
 
-        function initializeEventListeners() {
+        function initializeApp() {
+            preloadJewelryImages();
             elements.startButton.addEventListener('click', startArExperience);
             elements.flipButton.addEventListener('click', flipCamera);
-            elements.handButton.addEventListener('click', () => switchDetector('hand'));
-            elements.faceButton.addEventListener('click', () => switchDetector('face'));
+            elements.toggleJewelryButton.addEventListener('click', () => {
+                elements.jewelryCarousel.classList.toggle('visible');
+            });
             document.querySelectorAll('.finger-button').forEach(button => {
                 button.addEventListener('click', () => selectFinger(button.dataset.finger));
             });
         }
 
         async function startArExperience() {
-            preloadJewelryImages();
-            await assetsReadyPromise; 
             elements.splashScreen.style.display = 'none';
             elements.arContainer.style.display = 'block';
-            await setupCamera(state.currentFacingMode);
-            await switchDetector('hand');
-            renderLoop();
+            try {
+                await setupCamera();
+                handDetector = await createHandDetector();
+                populateJewelryCarousel();
+                detectionInterval = setInterval(detect, 100);
+                renderLoop();
+            } catch (error) { alert("No se pudo iniciar la experiencia. Revisa los permisos."); }
         }
         
-        function preloadJewelryImages() { for (const id in jewelryCatalog) { const jewel = jewelryCatalog[id]; jewel.image.src = jewel.imageUrl; jewel.image.onload = () => jewel.loaded = true; } }
-        
-        async function switchDetector(type) {
-            if (state.detectionInterval) clearInterval(state.detectionInterval);
-            state.activeDetectorType = type;
-            state.lastDetections = [];
-            
-            elements.handButton.classList.toggle('active', type === 'hand');
-            elements.faceButton.classList.toggle('active', type === 'face');
-            
-            // Lógica de visibilidad de la UI corregida
-            elements.uiBottomContainer.style.display = (type === 'hand') ? 'flex' : 'none';
-            elements.mainSelector.style.display = 'flex'; // Siempre visible
-
-            if (type === 'hand') { populateJewelryCarousel('hand'); }
-
-            try { if (type === 'hand' && !state.handDetector) { elements.loadingOverlay.style.display = 'flex'; state.handDetector = await createHandDetector(); } else if (type === 'face' && !state.faceDetector) { elements.loadingOverlay.style.display = 'flex'; state.faceDetector = await createFaceDetector(); } } catch (error) { console.error(`Error al cargar detector ${type}:`, error); } finally { elements.loadingOverlay.style.display = 'none'; }
-            state.detectionInterval = setInterval(detect, 100);
+        function preloadJewelryImages() { 
+            for (const id in jewelryCatalog) { 
+                const jewel = jewelryCatalog[id];
+                jewel.image.crossOrigin = "anonymous";
+                jewel.image.src = jewel.imageUrl; 
+                jewel.image.onload = () => jewel.loaded = true;
+            } 
         }
 
-        function populateJewelryCarousel(type) { elements.jewelryCarousel.innerHTML = ''; let firstJewelId = null; for (const id in jewelryCatalog) { if (jewelryCatalog[id].type === type) { if (!firstJewelId) firstJewelId = id; const button = document.createElement('button'); button.className = 'jewel-button'; button.id = `jewel-btn-${id}`; button.style.backgroundImage = `url(${jewelryCatalog[id].imageUrl})`; button.onclick = () => selectJewel(id); elements.jewelryCarousel.appendChild(button); } } if (firstJewelId) { selectJewel(firstJewelId); } }
+        function populateJewelryCarousel() {
+            let firstJewelId = Object.keys(jewelryCatalog)[0];
+            for (const id in jewelryCatalog) {
+                const button = document.createElement('button');
+                button.className = 'jewel-button';
+                button.id = `jewel-btn-${id}`;
+                button.style.backgroundImage = `url(${jewelryCatalog[id].imageUrl})`;
+                button.onclick = () => selectJewel(id);
+                elements.jewelryCarousel.appendChild(button);
+            }
+            if (firstJewelId) { selectJewel(firstJewelId); }
+        }
+
         function selectJewel(id) { state.activeJewelId = id; document.querySelectorAll('.jewel-button').forEach(btn => btn.classList.remove('active')); document.getElementById(`jewel-btn-${id}`).classList.add('active'); }
         function selectFinger(finger) { state.activeFinger = finger; document.querySelectorAll('.finger-button').forEach(btn => btn.classList.remove('active')); document.querySelector(`.finger-button[data-finger="${finger}"]`).classList.add('active'); }
-        function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(state.currentFacingMode); }
-        async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return await handPoseDetection.createDetector(model, config); }
-        async function createFaceDetector() { const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh' }; return await faceLandmarksDetection.createDetector(model, config); }
-        async function setupCamera(facingMode) { try { if (elements.video.srcObject) { elements.video.srcObject.getTracks().forEach(t => t.stop()); } const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } }); elements.video.srcObject = stream; await elements.video.play(); const { videoWidth, videoHeight } = elements.video; elements.canvas.width = videoWidth; elements.canvas.height = videoHeight; elements.canvas.style.transform = (facingMode === 'user') ? 'scaleX(-1)' : 'scaleX(1)'; } catch (error) { console.error("Error de cámara:", error); } }
-        async function detect() { if (elements.video.paused) return; let detections = []; if (state.activeDetectorType === 'hand' && state.handDetector) { detections = await state.handDetector.estimateHands(elements.video); } else if (state.activeDetectorType === 'face' && state.faceDetector) { detections = await state.faceDetector.estimateFaces(elements.video); } state.lastDetections = detections; }
+        function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(); }
+        async function setupCamera() { if (elements.video.srcObject) { elements.video.srcObject.getTracks().forEach(t => t.stop()); } const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: state.currentFacingMode } }); elements.video.srcObject = stream; await elements.video.play(); elements.canvas.width = elements.video.videoWidth; elements.canvas.height = elements.video.videoHeight; }
+        async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return handPoseDetection.createDetector(model, config); }
+        async function detect() { if (elements.video.paused || !handDetector) return; state.lastDetections = await handDetector.estimateHands(elements.video); }
         
         function renderLoop() {
             elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
             elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height);
-            drawWatermark();
             if (state.lastDetections.length > 0) {
-                if (state.activeDetectorType === 'hand') { drawHandJewelry(state.lastDetections); } 
-                else if (state.activeDetectorType === 'face') { drawFaceLandmarks(state.lastDetections); }
+                drawRing(state.lastDetections);
             }
             requestAnimationFrame(renderLoop);
         }
 
-        function drawWatermark() { if (!elements.watermark.complete || elements.watermark.naturalWidth === 0) return; const size = Math.min(elements.canvas.width, elements.canvas.height) * 0.08; const padding = 20; elements.ctx.save(); elements.ctx.globalAlpha = 0.6; if (state.currentFacingMode === 'user') { elements.ctx.scale(-1, 1); elements.ctx.drawImage(elements.watermark, -size - padding, padding, size, size); } else { elements.ctx.drawImage(elements.watermark, padding, padding, size, size); } elements.ctx.restore(); }
-        
-        function drawHandJewelry(hands) {
-            if (!state.activeJewelId) return; const jewel = jewelryCatalog[state.activeJewelId]; if (!jewel || !jewel.loaded) return;
+        function drawRing(hands) {
+            if (!state.activeJewelId) return;
+            const jewel = jewelryCatalog[state.activeJewelId];
+            if (!jewel || !jewel.loaded) return;
             for (const hand of hands) {
-                const anchorIndex = fingerMap[state.activeFinger]; if (!anchorIndex) continue;
-                const p1 = hand.keypoints[anchorIndex]; const p2 = hand.keypoints[anchorIndex + 1]; if (!p1 || !p2) continue;
+                const anchorIndex = fingerMap[state.activeFinger];
+                if (!anchorIndex) continue;
+                const p1 = hand.keypoints[anchorIndex]; const p2 = hand.keypoints[anchorIndex + 1];
+                if (!p1 || !p2) continue;
                 const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
                 const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
                 const ringWidth = fingerWidth * jewel.scale;
                 const ringHeight = ringWidth * (jewel.image.height / jewel.image.width);
                 const midX = (p1.x + p2.x) / 2; const midY = (p1.y + p2.y) / 2;
-                elements.ctx.save(); elements.ctx.translate(midX, midY); elements.ctx.rotate(angle);
+                elements.ctx.save();
+                elements.ctx.translate(midX, midY);
+                elements.ctx.rotate(angle);
                 elements.ctx.drawImage(jewel.image, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
                 elements.ctx.restore();
             }
         }
         
-        function drawFaceLandmarks(faces) { const p = [172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397]; for (const face of faces) { for (const i of p) { const k = face.keypoints[i]; elements.ctx.fillStyle = '#FFFFFF'; elements.ctx.beginPath(); elements.ctx.arc(k.x, k.y, 4, 0, 2*Math.PI); elements.ctx.fill(); } } }
-        
-        initializeEventListeners();
+        initializeApp();
     });
     </script>
 </body>
