@@ -49,18 +49,17 @@
     <script>
         const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), handButton: document.getElementById('select-hand'), faceButton: document.getElementById('select-face'), loadingOverlay: document.getElementById('loading-overlay'), watermark: new Image() };
         const state = { handDetector: null, faceDetector: null, currentFacingMode: 'environment', activeDetectorType: 'hand', lastDetections: [], detectionInterval: null };
-        const VERNICE_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAbFBMVEUAAAD///8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB+B4XgpAAAAI3RSTlMA9wgJDPv19/f39/f39/f39/f39/f39/f19/f39wgJDAwz2ko+AAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAoNJREFUeJzt3e1y20AYBVGAlKCAiIsghxwhcIqE/v+XFRs1YAwJ5PTs2P1pWz3B6b2Z8A4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAALizc3p/sO/5m3O6n5GPhv/D4T3N6X4m3f5Q9f2s+TfCH3z5y/k/8g8JHyR8kPBBYgLhJ/z352+GfGTCByU+kPBBYgLhJ3z352+GfGTCByU+kPBBYgLhJ/z052+GfGTCByU+kPBBYgLhJ3z052+GfGTCByU+kPBBYgLhJ3zy52+GfGTCByU+kPBBYgLhJzz587dBPjLhgxIfSPggsYDwEx57/uYwZMIHJb6Q8EFiAeEnPPT8zWFIhA9KfCDhg8QCwk944PmbsxAhH5nwwYkPhJ8x4YMTn4oPEn5mwoeZ+Cjho5YPhJ8x4cNMfBTw0csHwk8Y8GGmPgr4aOWD8BEGPMzERwEf3Xwg/IABDzPxUcBDNx8IP2DAg0x8FPDQzQfCRxjwwJkIHyV88OFB+AgDHnwj4YOCRQg/Y8CDS0T4KOGDBQg/YsCDyUT4KOGjBgg/Y8CD+UT4KOGTBwg/Y8CD2UT4KOGTCAg/Y8CD6UT4KOGTCAg/YsCD2UT4KOGTCQg/YsCDmUT4KOGTDAg/YsCDmUT4aB0hfMQAB81mwoeZ+CDho3UI4SMcON1sJnyYCQ8k/EjjB8JnOHDCbCZ8mAkPJvyo/ED4CAcON5sJHybhQYQ/KT8QPsCBY81mwoeZ8GDCDy4fCB9gwLEmk/BhJjyY8IPLB8IHGHCsmQwfZsKDBx/4fCB8gAFHmkzCh5nwYMAPLh8IH2DAkWYyfZgJDyb8oPxA+AgHDjSb6cNM+DDhh5YPhJ9w4ECzGT/MhA8TfujyAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuNM/M60uQUYpxx0AAAAASUVORKCYII=';
+        
+        // --- ¡LA SOLUCIÓN! Usamos una URL externa y fiable ---
+        const VERNICE_LOGO_URL = 'https://i.ibb.co/xp3QL7W/LOGOnegro-Original.png';
 
-        // --- ARQUITECTURA "A PRUEBA DE BALAS" v2 ---
-
-        // 1. "Lista de chequeo pre-vuelo": Preparamos el logo.
         const assetsReadyPromise = new Promise((resolve) => {
-            elements.watermark.src = VERNICE_LOGO_BASE64;
+            // Le pedimos que cargue la imagen desde la URL
+            elements.watermark.src = VERNICE_LOGO_URL;
             elements.watermark.onload = () => { console.log("Assets pre-cargados (logo)."); resolve(); };
+            elements.watermark.onerror = () => { console.error("Error al cargar el logo desde la URL."); resolve(); } // Si falla, resolvemos igual para no bloquear la app.
         });
 
-        // 2. "El Portero": Ponemos los 'oyentes' en los botones.
-        // Se ejecuta inmediatamente y asegura que la UI siempre responda.
         function initializeEventListeners() {
             elements.startButton.addEventListener('click', startArExperience);
             elements.flipButton.addEventListener('click', flipCamera);
@@ -69,15 +68,11 @@
             console.log("Listeners de la UI activados.");
         }
 
-        // 3. "El Despegue": Esta función es llamada POR EL BOTÓN.
         async function startArExperience() {
             console.log("Botón 'Empezar' detectado. Iniciando secuencia...");
-            
-            // Primero, el portero confirma que la cocina está lista.
             await assetsReadyPromise; 
-            console.log("Confirmado: Assets listos. Procediendo...");
+            console.log("Assets listos. Procediendo...");
             
-            // Ahora, abre la puerta y empieza la fiesta.
             elements.splashScreen.style.opacity = '0';
             setTimeout(() => elements.splashScreen.style.display = 'none', 500);
             elements.arContainer.style.display = 'block';
@@ -87,7 +82,6 @@
             renderLoop();
         }
         
-        // --- El resto del código es idéntico a la versión funcional anterior ---
         function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(state.currentFacingMode); }
         async function switchDetector(type) { if (state.detectionInterval) clearInterval(state.detectionInterval); state.activeDetectorType = type; state.lastDetections = []; elements.handButton.classList.toggle('active', type === 'hand'); elements.faceButton.classList.toggle('active', type === 'face'); try { if (type === 'hand' && !state.handDetector) { elements.loadingOverlay.style.display = 'flex'; state.handDetector = await createHandDetector(); } else if (type === 'face' && !state.faceDetector) { elements.loadingOverlay.style.display = 'flex'; state.faceDetector = await createFaceDetector(); } } catch (error) { console.error(`Error al cargar detector ${type}:`, error); } finally { elements.loadingOverlay.style.display = 'none'; } state.detectionInterval = setInterval(detect, 100); }
         async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; const detector = await handPoseDetection.createDetector(model, detectorConfig); return detector; }
@@ -99,7 +93,6 @@
         function drawHandLandmarks(hands) { for (const hand of hands) { for (const kp of hand.keypoints) { elements.ctx.fillStyle = '#D5B488'; elements.ctx.beginPath(); elements.ctx.arc(kp.x, kp.y, 5, 0, 2*Math.PI); elements.ctx.fill(); } } }
         function drawFaceLandmarks(faces) { const p = [172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397]; for (const face of faces) { for (const i of p) { const k = face.keypoints[i]; elements.ctx.fillStyle = '#FFFFFF'; elements.ctx.beginPath(); elements.ctx.arc(k.x, k.y, 4, 0, 2*Math.PI); elements.ctx.fill(); } } }
         
-        // ¡ARRANCAMOS! Ponemos al portero en su puesto.
         initializeEventListeners();
     </script>
 </body>
