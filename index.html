@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba de Fuego: Conexión de Cámara</title>
+    <title>Prueba de Fuego v2: Forzando Play</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #111; display: flex; justify-content: center; align-items: center; }
         #start-button { padding: 20px 40px; font-size: 1.5rem; cursor: pointer; }
         #video-container { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #camera-video { width: 100%; height: 100%; object-fit: cover; }
+        /* Añadimos el efecto espejo aquí, ya que ahora sí veremos el video */
+        #camera-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     </style>
 </head>
 <body>
@@ -24,22 +25,27 @@
         const videoElement = document.getElementById('camera-video');
 
         startButton.addEventListener('click', async () => {
-            console.log("Botón presionado. Realizando la prueba de fuego...");
+            console.log("Botón presionado. Realizando la prueba de fuego v2...");
             startButton.style.display = 'none';
             videoContainer.style.display = 'block';
 
             try {
-                // La petición más simple y universal posible.
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                
-                console.log("¡ÉXITO! El navegador entregó el stream de la cámara.");
+                console.log("ÉXITO: Stream de la cámara obtenido.");
                 videoElement.srcObject = stream;
 
+                // --- ¡LA SOLUCIÓN! ---
+                // Algunos navegadores (especialmente móviles) requieren una interacción
+                // del usuario para iniciar la reproducción, ignorando 'autoplay'.
+                // Le damos la orden explícita de reproducir.
+                await videoElement.play();
+                // ---------------------
+
+                console.log("ÉXITO: Reproducción del video iniciada.");
+
             } catch (error) {
-                // Si esto falla, el problema es fundamental.
                 console.error("¡PRUEBA DE FUEGO FALLIDA! El error es:", error);
                 alert(`FALLO DE ACCESO A LA CÁMARA.\n\nNOMBRE DEL ERROR:\n${error.name}\n\nMENSAJE:\n${error.message}`);
-                
                 videoContainer.style.display = 'none';
                 startButton.style.display = 'block';
                 startButton.innerText = "VOLVER A INTENTAR";
