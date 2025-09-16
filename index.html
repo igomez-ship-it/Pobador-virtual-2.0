@@ -50,16 +50,18 @@
         const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), handButton: document.getElementById('select-hand'), faceButton: document.getElementById('select-face'), loadingOverlay: document.getElementById('loading-overlay'), watermark: new Image() };
         const state = { handDetector: null, faceDetector: null, currentFacingMode: 'environment', activeDetectorType: 'hand', lastDetections: [], detectionInterval: null };
         
-        // --- ¡LA SOLUCIÓN! Usamos una URL externa y fiable ---
         const VERNICE_LOGO_URL = 'https://i.ibb.co/xp3QL7W/LOGOnegro-Original.png';
 
+        // --- ARQUITECTURA "A PRUEBA DE BALAS" v3 ---
+
+        // 1. "Lista de chequeo pre-vuelo": Preparamos el logo.
         const assetsReadyPromise = new Promise((resolve) => {
-            // Le pedimos que cargue la imagen desde la URL
             elements.watermark.src = VERNICE_LOGO_URL;
             elements.watermark.onload = () => { console.log("Assets pre-cargados (logo)."); resolve(); };
-            elements.watermark.onerror = () => { console.error("Error al cargar el logo desde la URL."); resolve(); } // Si falla, resolvemos igual para no bloquear la app.
+            elements.watermark.onerror = () => { console.error("Error al cargar el logo desde la URL."); resolve(); }
         });
 
+        // 2. "El Portero": Ponemos los 'oyentes' en los botones.
         function initializeEventListeners() {
             elements.startButton.addEventListener('click', startArExperience);
             elements.flipButton.addEventListener('click', flipCamera);
@@ -68,11 +70,15 @@
             console.log("Listeners de la UI activados.");
         }
 
+        // 3. "El Despegue": Esta función es llamada POR EL BOTÓN.
         async function startArExperience() {
             console.log("Botón 'Empezar' detectado. Iniciando secuencia...");
-            await assetsReadyPromise; 
-            console.log("Assets listos. Procediendo...");
             
+            // Primero, el portero confirma que la cocina está lista.
+            await assetsReadyPromise; 
+            console.log("Confirmado: Assets listos. Procediendo...");
+            
+            // Ahora, abre la puerta y empieza la fiesta.
             elements.splashScreen.style.opacity = '0';
             setTimeout(() => elements.splashScreen.style.display = 'none', 500);
             elements.arContainer.style.display = 'block';
@@ -82,6 +88,7 @@
             renderLoop();
         }
         
+        // --- El resto del código es idéntico a la versión funcional anterior ---
         function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(state.currentFacingMode); }
         async function switchDetector(type) { if (state.detectionInterval) clearInterval(state.detectionInterval); state.activeDetectorType = type; state.lastDetections = []; elements.handButton.classList.toggle('active', type === 'hand'); elements.faceButton.classList.toggle('active', type === 'face'); try { if (type === 'hand' && !state.handDetector) { elements.loadingOverlay.style.display = 'flex'; state.handDetector = await createHandDetector(); } else if (type === 'face' && !state.faceDetector) { elements.loadingOverlay.style.display = 'flex'; state.faceDetector = await createFaceDetector(); } } catch (error) { console.error(`Error al cargar detector ${type}:`, error); } finally { elements.loadingOverlay.style.display = 'none'; } state.detectionInterval = setInterval(detect, 100); }
         async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; const detector = await handPoseDetection.createDetector(model, detectorConfig); return detector; }
