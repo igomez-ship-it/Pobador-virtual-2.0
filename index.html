@@ -3,54 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba de Fuego v2: Forzando Play</title>
+    <title>Base de Cámara Universal y Robusta</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #111; display: flex; justify-content: center; align-items: center; }
-        #start-button { padding: 20px 40px; font-size: 1.5rem; cursor: pointer; }
-        #video-container { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        /* Añadimos el efecto espejo aquí, ya que ahora sí veremos el video */
-        #camera-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; }
+        #start-button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 1.5rem; cursor: pointer; z-index: 10; }
+        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        #ar-video { display: none; }
     </style>
 </head>
 <body>
-    <button id="start-button">INICIAR PRUEBA</button>
-
-    <div id="video-container">
-        <video id="camera-video" playsinline autoplay muted></video>
-    </div>
+    <button id="start-button">Empezar</button>
+    <video id="ar-video" playsinline autoplay muted></video>
+    <canvas id="ar-canvas"></canvas>
 
     <script>
         const startButton = document.getElementById('start-button');
-        const videoContainer = document.getElementById('video-container');
-        const videoElement = document.getElementById('camera-video');
+        const videoElement = document.getElementById('ar-video');
+        const canvasElement = document.getElementById('ar-canvas');
+        const canvasCtx = canvasElement.getContext('2d');
 
         startButton.addEventListener('click', async () => {
-            console.log("Botón presionado. Realizando la prueba de fuego v2...");
+            console.log("Botón presionado. Iniciando secuencia de cámara universal...");
             startButton.style.display = 'none';
-            videoContainer.style.display = 'block';
 
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                console.log("ÉXITO: Stream de la cámara obtenido.");
-                videoElement.srcObject = stream;
+            // --- LA SOLUCIÓN DEFINITIVA PARA MÓVILES ---
+            // 1. Inmediatamente después del clic, intentamos reproducir el video vacío.
+            //    Esto satisface la regla de "interacción del usuario" del navegador móvil.
+            let playPromise = videoElement.play();
 
-                // --- ¡LA SOLUCIÓN! ---
-                // Algunos navegadores (especialmente móviles) requieren una interacción
-                // del usuario para iniciar la reproducción, ignorando 'autoplay'.
-                // Le damos la orden explícita de reproducir.
-                await videoElement.play();
-                // ---------------------
-
-                console.log("ÉXITO: Reproducción del video iniciada.");
-
-            } catch (error) {
-                console.error("¡PRUEBA DE FUEGO FALLIDA! El error es:", error);
-                alert(`FALLO DE ACCESO A LA CÁMARA.\n\nNOMBRE DEL ERROR:\n${error.name}\n\nMENSAJE:\n${error.message}`);
-                videoContainer.style.display = 'none';
-                startButton.style.display = 'block';
-                startButton.innerText = "VOLVER A INTENTAR";
+            if (playPromise !== undefined) {
+                playPromise.then(_ => {
+                    // El video (vacío) ha comenzado a "reproducirse".
+                    // Ahora, podemos tomarnos nuestro tiempo para buscar la cámara.
+                    console.log("Pre-reproducción iniciada. Solicitando stream de la cámara...");
+                    requestCameraStream();
+                }).catch(error => {
+                    // Algunos navegadores no permiten reproducir un video vacío.
+                    // En ese caso, procedemos de la forma normal.
+                    console.log("Pre-reproducción falló. Solicitando stream directamente.");
+                    requestCameraStream();
+                });
+            } else {
+                requestCameraStream();
             }
         });
+
+        async function requestCameraStream() {
+            try {
+                // 2. Buscamos la cámara.
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                console.log("Stream de la cámara obtenido.");
+
+                // 3. Se la pasamos al elemento de video, que ya tiene permiso para reproducir.
+                videoElement.srcObject = stream;
+                
+                // Aseguramos que se reproduzca por si la pre-reproducción no funcionó.
+                videoElement.play();
+
+                videoElement.onloadedmetadata = () => {
+                    canvasElement.width = videoElement.videoWidth;
+                    canvasElement.height = videoElement.videoHeight;
+                    console.log("Cámara conectada y lista. Iniciando renderizado.");
+                    renderLoop();
+                };
+
+            } catch (error) {
+                console.error("FALLO CRÍTICO:", error);
+                alert(`No se pudo iniciar la cámara: ${error.name} - ${error.message}`);
+                startButton.style.display = 'block';
+            }
+        }
+
+        function renderLoop() {
+            // Detectamos si es una cámara frontal (selfie) para aplicar el efecto espejo.
+            // Una forma simple es asumir que las cámaras de PC son frontales.
+            // Para una detección más precisa se necesitan técnicas más avanzadas.
+            const isFrontCamera = videoElement.srcObject.getVideoTracks()[0].getSettings().facingMode !== 'environment';
+
+            canvasCtx.save();
+            if (isFrontCamera) {
+                // Efecto espejo
+                canvasCtx.scale(-1, 1);
+                canvasCtx.drawImage(videoElement, -canvasElement.width, 0, canvasElement.width, canvasElement.height);
+            } else {
+                canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+            }
+            canvasCtx.restore();
+            
+            requestAnimationFrame(renderLoop);
+        }
     </script>
 </body>
 </html>
