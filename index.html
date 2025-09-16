@@ -3,66 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba de Cámara Universal</title>
+    <title>Prueba de Fuego: Conexión de Cámara</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; }
-        #start-button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 1.5rem; cursor: pointer; z-index: 10; }
-        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        #ar-video { display: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #111; display: flex; justify-content: center; align-items: center; }
+        #start-button { padding: 20px 40px; font-size: 1.5rem; cursor: pointer; }
+        #video-container { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #camera-video { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body>
-    <button id="start-button">Empezar Prueba de Cámara</button>
-    <video id="ar-video" playsinline autoplay muted></video>
-    <canvas id="ar-canvas"></canvas>
+    <button id="start-button">INICIAR PRUEBA</button>
+
+    <div id="video-container">
+        <video id="camera-video" playsinline autoplay muted></video>
+    </div>
 
     <script>
         const startButton = document.getElementById('start-button');
-        const videoElement = document.getElementById('ar-video');
-        const canvasElement = document.getElementById('ar-canvas');
-        const canvasCtx = canvasElement.getContext('2d');
+        const videoContainer = document.getElementById('video-container');
+        const videoElement = document.getElementById('camera-video');
 
-        startButton.addEventListener('click', startCamera);
-
-        async function startCamera() {
-            console.log("Botón presionado. Intentando acceder a la cámara...");
+        startButton.addEventListener('click', async () => {
+            console.log("Botón presionado. Realizando la prueba de fuego...");
             startButton.style.display = 'none';
+            videoContainer.style.display = 'block';
 
             try {
-                // --- ¡ESTE ES EL CAMBIO CLAVE! ---
-                // En lugar de pedir una cámara 'environment' específica,
-                // simplemente pedimos 'video: true'. Esto le dice al navegador:
-                // "Dame cualquier cámara de video que tengas". Es universal.
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: true 
-                });
-                // ------------------------------------
-
+                // La petición más simple y universal posible.
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                
+                console.log("¡ÉXITO! El navegador entregó el stream de la cámara.");
                 videoElement.srcObject = stream;
-                videoElement.onloadedmetadata = () => {
-                    console.log("Metadatos del video cargados. Dimensiones:", videoElement.videoWidth, videoElement.videoHeight);
-                    canvasElement.width = videoElement.videoWidth;
-                    canvasElement.height = videoElement.videoHeight;
-                    renderLoop();
-                };
 
             } catch (error) {
-                console.error("FALLO CRÍTICO AL ACCEDER A LA CÁMARA:", error);
-                alert("No se pudo acceder a la cámara. Revisa los permisos en tu navegador. Error: " + error.message);
+                // Si esto falla, el problema es fundamental.
+                console.error("¡PRUEBA DE FUEGO FALLIDA! El error es:", error);
+                alert(`FALLO DE ACCESO A LA CÁMARA.\n\nNOMBRE DEL ERROR:\n${error.name}\n\nMENSAJE:\n${error.message}`);
+                
+                videoContainer.style.display = 'none';
                 startButton.style.display = 'block';
+                startButton.innerText = "VOLVER A INTENTAR";
             }
-        }
-
-        function renderLoop() {
-            // En modo selfie (la mayoría de las webcams), queremos el efecto espejo.
-            // Para ello, volteamos el canvas horizontalmente antes de dibujar.
-            canvasCtx.save();
-            canvasCtx.scale(-1, 1);
-            canvasCtx.drawImage(videoElement, -canvasElement.width, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.restore();
-            
-            requestAnimationFrame(renderLoop);
-        }
+        });
     </script>
 </body>
 </html>
