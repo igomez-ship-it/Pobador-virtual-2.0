@@ -3,95 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Base de Cámara Universal y Robusta</title>
+    <title>Diagnóstico Final de Video</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; }
-        #start-button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 1.5rem; cursor: pointer; z-index: 10; }
-        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        #ar-video { display: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; }
+        #start-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 25px 50px;
+            font-size: 1.8rem;
+            font-family: sans-serif;
+            cursor: pointer;
+            z-index: 10;
+        }
+        /* El video ahora será VISIBLE directamente */
+        #camera-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* Le aplicamos el efecto espejo directamente aquí */
+            transform: scaleX(-1);
+            display: none; /* Empezará oculto */
+        }
     </style>
 </head>
 <body>
-    <button id="start-button">Empezar</button>
-    <video id="ar-video" playsinline autoplay muted></video>
-    <canvas id="ar-canvas"></canvas>
+
+    <button id="start-button">INICIAR DIAGNÓSTICO</button>
+    
+    <!-- Este es el único elemento que importa. No hay canvas. -->
+    <video id="camera-video" playsinline autoplay muted></video>
 
     <script>
         const startButton = document.getElementById('start-button');
-        const videoElement = document.getElementById('ar-video');
-        const canvasElement = document.getElementById('ar-canvas');
-        const canvasCtx = canvasElement.getContext('2d');
+        const videoElement = document.getElementById('camera-video');
 
+        // Esta es la única acción en toda la página.
         startButton.addEventListener('click', async () => {
-            console.log("Botón presionado. Iniciando secuencia de cámara universal...");
+            console.log("Iniciando la prueba más simple posible...");
             startButton.style.display = 'none';
 
-            // --- LA SOLUCIÓN DEFINITIVA PARA MÓVILES ---
-            // 1. Inmediatamente después del clic, intentamos reproducir el video vacío.
-            //    Esto satisface la regla de "interacción del usuario" del navegador móvil.
-            let playPromise = videoElement.play();
+            // El video se hace visible.
+            videoElement.style.display = 'block';
 
-            if (playPromise !== undefined) {
-                playPromise.then(_ => {
-                    // El video (vacío) ha comenzado a "reproducirse".
-                    // Ahora, podemos tomarnos nuestro tiempo para buscar la cámara.
-                    console.log("Pre-reproducción iniciada. Solicitando stream de la cámara...");
-                    requestCameraStream();
-                }).catch(error => {
-                    // Algunos navegadores no permiten reproducir un video vacío.
-                    // En ese caso, procedemos de la forma normal.
-                    console.log("Pre-reproducción falló. Solicitando stream directamente.");
-                    requestCameraStream();
-                });
-            } else {
-                requestCameraStream();
-            }
-        });
-
-        async function requestCameraStream() {
             try {
-                // 2. Buscamos la cámara.
+                // 1. Pedimos la cámara.
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                console.log("Stream de la cámara obtenido.");
+                console.log("Stream obtenido.");
 
-                // 3. Se la pasamos al elemento de video, que ya tiene permiso para reproducir.
+                // 2. Lo asignamos DIRECTAMENTE al elemento de video.
                 videoElement.srcObject = stream;
                 
-                // Aseguramos que se reproduzca por si la pre-reproducción no funcionó.
+                // 3. Forzamos la reproducción por si acaso.
+                // Esta es la secuencia más directa posible.
                 videoElement.play();
-
-                videoElement.onloadedmetadata = () => {
-                    canvasElement.width = videoElement.videoWidth;
-                    canvasElement.height = videoElement.videoHeight;
-                    console.log("Cámara conectada y lista. Iniciando renderizado.");
-                    renderLoop();
-                };
+                console.log("Orden de 'play' enviada.");
 
             } catch (error) {
-                console.error("FALLO CRÍTICO:", error);
-                alert(`No se pudo iniciar la cámara: ${error.name} - ${error.message}`);
+                console.error("DIAGNÓSTICO FALLIDO:", error);
+                alert(`Error definitivo: ${error.name} - ${error.message}`);
+                videoElement.style.display = 'none';
                 startButton.style.display = 'block';
             }
-        }
-
-        function renderLoop() {
-            // Detectamos si es una cámara frontal (selfie) para aplicar el efecto espejo.
-            // Una forma simple es asumir que las cámaras de PC son frontales.
-            // Para una detección más precisa se necesitan técnicas más avanzadas.
-            const isFrontCamera = videoElement.srcObject.getVideoTracks()[0].getSettings().facingMode !== 'environment';
-
-            canvasCtx.save();
-            if (isFrontCamera) {
-                // Efecto espejo
-                canvasCtx.scale(-1, 1);
-                canvasCtx.drawImage(videoElement, -canvasElement.width, 0, canvasElement.width, canvasElement.height);
-            } else {
-                canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-            }
-            canvasCtx.restore();
-            
-            requestAnimationFrame(renderLoop);
-        }
+        });
     </script>
 </body>
 </html>
