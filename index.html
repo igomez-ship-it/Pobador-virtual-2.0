@@ -13,7 +13,6 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; }
         #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        /* --- TAMAÑO DE LOGO CORREGIDO --- */
         #splash-screen img { max-width: 250px; margin-bottom: 2rem; }
         #splash-screen h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
         #splash-screen p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
@@ -36,14 +35,11 @@
         #jewelry-carousel.visible { opacity: 1; pointer-events: auto; top: calc(50% - 115px - 100px); }
         .jewel-button { background-color: transparent; border: 3px solid #D5B488; border-radius: 12px; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer; background-size: contain; background-position: center; }
         .jewel-button.active { border-color: #FFFFFF; }
-        
-        /* --- SELECTOR DE DEDOS CON CÍRCULOS --- */
         #finger-selector-container { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 200px; height: 150px; }
         #hand-visual-selector { width: 100%; height: 100%; background-image: url('https://i.ibb.co/hFhNxZGD/Untitled-1-Photoroom.png'); background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: transform 0.4s ease; }
         #ui-container.ui-right #hand-visual-selector { transform: scaleX(-1); }
         .finger-hotspot { position: absolute; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s ease; width: 40px; height: 40px; }
         .finger-hotspot.active { border-color: #D5B488; background-color: rgba(213, 180, 136, 0.3); }
-        /* Coordenadas precisas para los círculos */
         .finger-hotspot[data-finger="thumb"]  { top: 90px; left: 15px; }
         .finger-hotspot[data-finger="index"]  { top: 30px; left: 50px; }
         .finger-hotspot[data-finger="middle"] { top: 10px; left: 85px; }
@@ -52,12 +48,7 @@
     </style>
 </head>
 <body>
-    <div id="splash-screen">
-        <img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
-        <h1>Bienvenida</h1>
-        <p>Pruébate nuestras joyas virtualmente.</p>
-        <button id="start-button" class="cta-button">Empezar</button>
-    </div>
+    <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"/><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p><button id="start-button" class="cta-button">Empezar</button></div>
     <div id="ar-container">
         <video id="ar-video" playsinline autoplay muted></video>
         <canvas id="ar-canvas"></canvas>
@@ -111,7 +102,19 @@
         function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(); }
         async function setupCamera() { if (elements.video.srcObject) { elements.video.srcObject.getTracks().forEach(t => t.stop()); } const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: state.currentFacingMode } }); elements.video.srcObject = stream; await elements.video.play(); elements.canvas.width = elements.video.videoWidth; elements.canvas.height = elements.video.videoHeight; }
         async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return handPoseDetection.createDetector(model, config); }
-        async function detect() { if (elements.video.paused || !handDetector) return; const hands = await handDetector.estimateHands(elements.video); state.lastDetections = hands; if (hands.length > 0) { const handedness = hands[0].handedness; elements.uiContainer.className = (handedness === 'Left') ? 'ui-right' : 'ui-left'; } }
+        
+        async function detect() {
+            if (elements.video.paused || !handDetector) return;
+            const hands = await handDetector.estimateHands(elements.video);
+            state.lastDetections = hands;
+            if (hands.length > 0) {
+                // --- ¡LÓGICA CORREGIDA! ---
+                // Si la mano detectada es la IZQUIERDA ('Left'), la UI va a la DERECHA.
+                // Si la mano detectada es la DERECHA ('Right'), la UI va a la IZQUIERDA.
+                const handedness = hands[0].handedness;
+                elements.uiContainer.className = (handedness === 'Left') ? 'ui-element ui-right' : 'ui-element ui-left';
+            }
+        }
         
         function renderLoop() {
             elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
