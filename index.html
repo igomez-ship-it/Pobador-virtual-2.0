@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Probador Virtual - Vernice (Base)</title>
+    <title>Probador Virtual - Vernice (Corazón)</title>
     <link rel="icon" href="https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
@@ -30,7 +30,6 @@
     </div>
 
     <script>
-    // --- MISIÓN: UN ANILLO EN UN DEDO ---
     document.addEventListener('DOMContentLoaded', () => {
 
         const elements = {
@@ -48,45 +47,33 @@
         const ringImage = new Image();
         let ringLoaded = false;
 
-        // URL del anillo, verificada y funcional
-        const RING_URL = 'https://i.ibb.co/qBwzR53/anillo-simple.png';
+        // --- ÚNICO CAMBIO: La URL de TU anillo ---
+        // El atributo 'crossOrigin' es clave para evitar problemas de "aduana" (CORS).
+        ringImage.crossOrigin = "anonymous"; 
+        const RING_URL = 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png';
 
         function initializeApp() {
-            // Pre-cargamos el único asset que nos importa
             ringImage.src = RING_URL;
             ringImage.onload = () => {
                 ringLoaded = true;
-                console.log("Anillo de muestra cargado con éxito.");
+                console.log("Anillo de Vernice cargado con éxito.");
             };
             ringImage.onerror = () => {
-                console.error("ERROR CRÍTICO: No se pudo cargar la imagen del anillo.");
+                console.error("ERROR CRÍTICO: No se pudo cargar la imagen del anillo desde la URL.");
             };
 
-            // Ponemos al portero a escuchar
             elements.startButton.addEventListener('click', startArExperience);
-            console.log("Aplicación inicializada. Esperando al usuario.");
         }
 
         async function startArExperience() {
-            console.log("Botón presionado. Iniciando...");
             elements.splashScreen.style.display = 'none';
             elements.arContainer.style.display = 'block';
 
             try {
-                // 1. Iniciar la cámara
                 await setupCamera();
-                console.log("Cámara iniciada.");
-
-                // 2. Cargar el detector de manos
-                console.log("Cargando detector de IA...");
                 handDetector = await createHandDetector();
-                console.log("Detector de IA listo.");
-
-                // 3. Iniciar los bucles
                 detectionInterval = setInterval(detect, 100);
                 renderLoop();
-                console.log("Sistema de detección y renderizado en marcha.");
-
             } catch (error) {
                 console.error("Fallo en la secuencia de inicio:", error);
                 alert("No se pudo iniciar la experiencia. Revisa los permisos de la cámara.");
@@ -115,33 +102,28 @@
         function renderLoop() {
             elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
             elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height);
-
             if (lastDetections.length > 0) {
                 drawRing(lastDetections);
             }
-
             requestAnimationFrame(renderLoop);
         }
 
         function drawRing(hands) {
             if (!ringLoaded) return;
-
             for (const hand of hands) {
-                // Puntos del dedo índice: 5 (nudillo), 6 (medio), 7 (arriba), 8 (punta)
-                const p1 = hand.keypoints[5]; // Nudillo
-                const p2 = hand.keypoints[6]; // Articulación media
-
+                const p1 = hand.keypoints[5];
+                const p2 = hand.keypoints[6];
                 const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
                 const distance = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-
-                const ringWidth = distance * 2.0; // Ajuste de tamaño
+                
+                const ringWidth = distance * 2.8; // Ajuste de tamaño para este anillo
                 const ringHeight = ringWidth * (ringImage.height / ringImage.width);
 
                 elements.ctx.save();
                 elements.ctx.translate(p1.x, p1.y);
                 elements.ctx.rotate(angle);
-                elements.ctx.translate(distance * 0.4, 0); // Lo movemos un 40% a lo largo del dedo
-
+                elements.ctx.translate(distance * 0.5, 0); // Lo centramos en el nudillo
+                
                 elements.ctx.drawImage(ringImage, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
                 elements.ctx.restore();
             }
