@@ -50,4 +50,76 @@
 </head>
 <body>
     <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente con una experiencia en tiempo real.</p><button id="start-button" class="cta-button">Empezar</button></div>
-    <div id="ar-container"><div id="loading-overlay"><div class="loading-spinner"></div><span id="loading-text">Cargando IA...</span></div><button id="flip-camera-button" title="Cambiar cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div><span>Girar</span></button><div id="jewelry-selector"><button 
+    <div id="ar-container"><div id="loading-overlay"><div class="loading-spinner"></div><span id="loading-text">Cargando IA...</span></div><button id="flip-camera-button" title="Cambiar cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div><span>Girar</span></button><div id="jewelry-selector"><button class="selector-button active" id="select-hand">Anillos</button><button class="selector-button" id="select-face">Collares</button></div><div id="jewelry-carousel-container"><div id="jewelry-carousel"></div></div><video id="ar-video" playsinline autoplay muted></video><canvas id="ar-canvas"></canvas></div>
+
+    <script>
+    // --- EL CÓDIGO SOLO SE EJECUTA CUANDO EL HTML ESTÁ 100% LISTO ---
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), handButton: document.getElementById('select-hand'), faceButton: document.getElementById('select-face'), loadingOverlay: document.getElementById('loading-overlay'), watermark: new Image(), jewelryCarouselContainer: document.getElementById('jewelry-carousel-container'), jewelryCarousel: document.getElementById('jewelry-carousel') };
+        const state = { handDetector: null, faceDetector: null, currentFacingMode: 'environment', activeDetectorType: 'hand', activeJewelId: null, lastDetections: [], detectionInterval: null };
+        
+        // --- INGREDIENTES FRESCOS Y VERIFICADOS ---
+        const VERNICE_LOGO_URL = 'https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png';
+        const jewelryCatalog = {
+            'ring-1': { type: 'hand', imageUrl: 'https://i.ibb.co/L5r9961/anillo-plata-1.png', image: new Image(), loaded: false, anchorPointIndex: 5, scale: 1.5, offsetY: 20 },
+            'ring-2': { type: 'hand', imageUrl: 'https://i.ibb.co/ckr2Y46/anillo-plata-2.png', image: new Image(), loaded: false, anchorPointIndex: 5, scale: 1.8, offsetY: 25 },
+            'ring-3': { type: 'hand', imageUrl: 'https://i.ibb.co/yqgJp7v/anillo-plata-3.png', image: new Image(), loaded: false, anchorPointIndex: 5, scale: 1.6, offsetY: 15 }
+        };
+
+        const assetsReadyPromise = new Promise((resolve) => {
+            elements.watermark.src = VERNICE_LOGO_URL;
+            elements.watermark.onload = () => { console.log("Assets pre-cargados (logo)."); resolve(); };
+            elements.watermark.onerror = (err) => { console.error("Error crítico al cargar el logo.", err); resolve(); }
+        });
+
+        function initializeEventListeners() {
+            elements.startButton.addEventListener('click', startArExperience);
+            elements.flipButton.addEventListener('click', flipCamera);
+            elements.handButton.addEventListener('click', () => switchDetector('hand'));
+            elements.faceButton.addEventListener('click', () => switchDetector('face'));
+            console.log("Listeners de la UI activados.");
+        }
+
+        async function startArExperience() {
+            console.log("Botón 'Empezar' detectado. Iniciando secuencia...");
+            preloadJewelryImages();
+            await assetsReadyPromise; 
+            console.log("Confirmado: Assets listos. Procediendo...");
+            
+            elements.splashScreen.style.opacity = '0';
+            setTimeout(() => elements.splashScreen.style.display = 'none', 500);
+            elements.arContainer.style.display = 'block';
+
+            await setupCamera(state.currentFacingMode);
+            await switchDetector('hand');
+            renderLoop();
+        }
+        
+        function preloadJewelryImages() { 
+            for (const id in jewelryCatalog) { 
+                const jewel = jewelryCatalog[id]; 
+                jewel.image.src = jewel.imageUrl; 
+                jewel.image.onload = () => { jewel.loaded = true; console.log(`Joya '${id}' cargada.`); };
+                jewel.image.onerror = () => { console.error(`Error al cargar la joya '${id}' desde ${jewel.imageUrl}`); }
+            } 
+        }
+        
+        async function switchDetector(type) { if (state.detectionInterval) clearInterval(state.detectionInterval); state.activeDetectorType = type; state.lastDetections = []; elements.handButton.classList.toggle('active', type === 'hand'); elements.faceButton.classList.toggle('active', type === 'face'); if (type === 'hand') { populateJewelryCarousel('hand'); elements.jewelryCarouselContainer.style.display = 'block'; elements.jewelrySelector.style.display = 'none'; } else { elements.jewelryCarouselContainer.style.display = 'none'; elements.jewelrySelector.style.display = 'flex'; } try { if (type === 'hand' && !state.handDetector) { elements.loadingOverlay.style.display = 'flex'; state.handDetector = await createHandDetector(); } else if (type === 'face' && !state.faceDetector) { elements.loadingOverlay.style.display = 'flex'; state.faceDetector = await createFaceDetector(); } } catch (error) { console.error(`Error al cargar detector ${type}:`, error); } finally { elements.loadingOverlay.style.display = 'none'; } state.detectionInterval = setInterval(detect, 100); }
+        function populateJewelryCarousel(type) { elements.jewelryCarousel.innerHTML = ''; let firstJewelId = null; for (const id in jewelryCatalog) { if (jewelryCatalog[id].type === type) { if (!firstJewelId) firstJewelId = id; const button = document.createElement('button'); button.className = 'jewel-button'; button.id = `jewel-btn-${id}`; button.style.backgroundImage = `url(${jewelryCatalog[id].imageUrl})`; button.onclick = () => selectJewel(id); elements.jewelryCarousel.appendChild(button); } } if (firstJewelId) { selectJewel(firstJewelId); } }
+        function selectJewel(id) { state.activeJewelId = id; document.querySelectorAll('.jewel-button').forEach(btn => btn.classList.remove('active')); document.getElementById(`jewel-btn-${id}`).classList.add('active'); }
+        function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(state.currentFacingMode); }
+        async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return await handPoseDetection.createDetector(model, detectorConfig); }
+        async function createFaceDetector() { const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh' }; return await faceLandmarksDetection.createDetector(model, detectorConfig); }
+        async function setupCamera(facingMode) { try { if (elements.video.srcObject) { elements.video.srcObject.getTracks().forEach(t => t.stop()); } const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } }); elements.video.srcObject = stream; await elements.video.play(); const { videoWidth, videoHeight } = elements.video; elements.canvas.width = videoWidth; elements.canvas.height = videoHeight; elements.canvas.style.transform = (facingMode === 'user') ? 'scaleX(-1)' : 'scaleX(1)'; } catch (error) { console.error("Error de cámara:", error); } }
+        async function detect() { if (elements.video.paused || elements.video.ended || elements.video.readyState < 4) return; let detections = []; const detector = state.activeDetectorType === 'hand' ? state.handDetector : state.faceDetector; if (!detector) return; if (state.activeDetectorType === 'hand') { detections = await detector.estimateHands(elements.video); } else { detections = await detector.estimateFaces(elements.video); } state.lastDetections = detections; }
+        function renderLoop() { elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height); elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height); drawWatermark(); if (state.lastDetections.length > 0) { if (state.activeDetectorType === 'hand') drawHandJewelry(state.lastDetections); else if (state.activeDetectorType === 'face') drawFaceLandmarks(state.lastDetections); } requestAnimationFrame(renderLoop); }
+        function drawWatermark() { if (!elements.watermark.complete || elements.watermark.naturalWidth === 0) { return; } const size = Math.min(elements.canvas.width, elements.canvas.height) * 0.08; const padding = 20; elements.ctx.save(); elements.ctx.globalAlpha = 0.6; if (state.currentFacingMode === 'user') { elements.ctx.scale(-1, 1); elements.ctx.drawImage(elements.watermark, -size - padding, padding, size, size); } else { elements.ctx.drawImage(elements.watermark, padding, padding, size, size); } elements.ctx.restore(); }
+        function drawHandJewelry(hands) { if (!state.activeJewelId) return; const jewel = jewelryCatalog[state.activeJewelId]; if (!jewel || !jewel.loaded) return; for (const hand of hands) { const p1 = hand.keypoints[jewel.anchorPointIndex]; const p2 = hand.keypoints[jewel.anchorPointIndex + 1]; const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x); const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2)); elements.ctx.save(); elements.ctx.translate(p1.x, p1.y); elements.ctx.rotate(angle); elements.ctx.translate(0, jewel.offsetY); const jewelWidth = fingerWidth * jewel.scale; const jewelHeight = jewelWidth * (jewel.image.height / jewel.image.width); elements.ctx.drawImage(jewel.image, -jewelWidth / 2, -jewelHeight / 2, jewelWidth, jewelHeight); elements.ctx.restore(); } }
+        function drawFaceLandmarks(faces) { const p = [172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397]; for (const face of faces) { for (const i of p) { const k = face.keypoints[i]; elements.ctx.fillStyle = '#FFFFFF'; elements.ctx.beginPath(); elements.ctx.arc(k.x, k.y, 4, 0, 2*Math.PI); elements.ctx.fill(); } } }
+        
+        initializeEventListeners();
+    });
+    </script>
+</body>
+</html>
