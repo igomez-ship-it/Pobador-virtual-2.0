@@ -97,29 +97,21 @@
                 const p1 = hand.keypoints[5];
                 const p2 = hand.keypoints[6];
 
-                // --- 1. CÁLCULO DE ROTACIÓN CORREGIDO ---
-                // Calculamos el ángulo del dedo y le sumamos 90 grados (PI/2 en radianes)
-                // para que quede perpendicular.
                 const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
-
-                // --- 2. CÁLCULO DE TAMAÑO CORREGIDO ---
                 const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
                 
-                // Usamos un factor de escala mucho más sutil. 1.2 = 20% más ancho que el dedo.
-                const ringWidth = fingerWidth * 1.2;
-                const ringHeight = ringWidth * (ringImage.height / ringImage.width);
+                // --- ¡AJUSTE DE PRECISIÓN! ---
+                // Reducimos el factor de escala a 0.9 para un ajuste más fino.
+                const ringWidth = fingerWidth * 0.9;
+                // ---------------------------
 
-                // --- 3. CÁLCULO DE POSICIÓN CORREGIDO ---
-                // Para centrarlo mejor, calculamos el punto medio entre los dos nudillos.
+                const ringHeight = ringWidth * (ringImage.height / ringImage.width);
                 const midX = (p1.x + p2.x) / 2;
                 const midY = (p1.y + p2.y) / 2;
                 
                 elements.ctx.save();
-                // Movemos el origen al punto MEDIO del dedo.
                 elements.ctx.translate(midX, midY);
-                // Rotamos.
                 elements.ctx.rotate(angle);
-                // Dibujamos la imagen centrada en este nuevo origen.
                 elements.ctx.drawImage(ringImage, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
                 elements.ctx.restore();
             }
