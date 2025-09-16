@@ -32,35 +32,26 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        const elements = {
-            splashScreen: document.getElementById('splash-screen'),
-            startButton: document.getElementById('start-button'),
-            arContainer: document.getElementById('ar-container'),
-            video: document.getElementById('ar-video'),
-            canvas: document.getElementById('ar-canvas'),
-            ctx: document.getElementById('ar-canvas').getContext('2d')
-        };
-
+        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d') };
         let handDetector = null;
         let lastDetections = [];
         let detectionInterval = null;
         const ringImage = new Image();
         let ringLoaded = false;
-
+        
         ringImage.crossOrigin = "anonymous"; 
         const RING_URL = 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png';
 
         function initializeApp() {
             ringImage.src = RING_URL;
             ringImage.onload = () => { ringLoaded = true; console.log("Anillo de Vernice cargado con éxito."); };
-            ringImage.onerror = () => { console.error("ERROR CRÍTICO: No se pudo cargar la imagen del anillo desde la URL."); };
+            ringImage.onerror = () => { console.error("ERROR CRÍTICO: No se pudo cargar la imagen del anillo."); };
             elements.startButton.addEventListener('click', startArExperience);
         }
 
         async function startArExperience() {
             elements.splashScreen.style.display = 'none';
             elements.arContainer.style.display = 'block';
-
             try {
                 await setupCamera();
                 handDetector = await createHandDetector();
@@ -100,51 +91,36 @@
             requestAnimationFrame(renderLoop);
         }
 
-        // --- ¡LA MAGIA DEL JOYERO DIGITAL! ---
         function drawRing(hands) {
             if (!ringLoaded) return;
             for (const hand of hands) {
-                // Puntos clave del dedo índice: 5 (base), 6 (medio)
                 const p1 = hand.keypoints[5];
                 const p2 = hand.keypoints[6];
 
-                // --- 1. CÁLCULO DE ROTACIÓN ---
-                // Usamos la tangente inversa para obtener el ángulo entre los dos puntos.
-                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                // --- 1. CÁLCULO DE ROTACIÓN CORREGIDO ---
+                // Calculamos el ángulo del dedo y le sumamos 90 grados (PI/2 en radianes)
+                // para que quede perpendicular.
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
 
-                // --- 2. CÁLCULO DE TAMAÑO ---
-                // Medimos la distancia entre los dos nudillos. Esta será nuestra referencia
-                // para saber qué tan "ancho" es el dedo en la pantalla.
+                // --- 2. CÁLCULO DE TAMAÑO CORREGIDO ---
                 const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-
-                // El ancho del anillo será proporcional al ancho del dedo.
-                // El '2.8' es un factor de escala que podemos ajustar. Un número más
-                // grande hará el anillo más grande, y viceversa.
-                const ringWidth = fingerWidth * 2.8;
-                // Mantenemos la proporción de la imagen original.
+                
+                // Usamos un factor de escala mucho más sutil. 1.2 = 20% más ancho que el dedo.
+                const ringWidth = fingerWidth * 1.2;
                 const ringHeight = ringWidth * (ringImage.height / ringImage.width);
 
-                // --- 3. CÁLCULO DE POSICIÓN ---
-                // Empezamos guardando el estado actual del canvas (para no afectar otros dibujos).
+                // --- 3. CÁLCULO DE POSICIÓN CORREGIDO ---
+                // Para centrarlo mejor, calculamos el punto medio entre los dos nudillos.
+                const midX = (p1.x + p2.x) / 2;
+                const midY = (p1.y + p2.y) / 2;
+                
                 elements.ctx.save();
-                
-                // Movemos el "origen" del canvas al punto del primer nudillo.
-                elements.ctx.translate(p1.x, p1.y);
-                
-                // Rotamos todo el canvas según el ángulo del dedo.
+                // Movemos el origen al punto MEDIO del dedo.
+                elements.ctx.translate(midX, midY);
+                // Rotamos.
                 elements.ctx.rotate(angle);
-
-                // Ahora que estamos "alineados" con el dedo, nos desplazamos un poco
-                // a lo largo de él para colocar el anillo entre los nudillos.
-                // El '0.5' significa que nos moveremos la mitad de la distancia entre nudillos.
-                elements.ctx.translate(fingerWidth * 0.5, 0);
-
-                // Finalmente, dibujamos la imagen del anillo. Como hemos movido y rotado
-                // el canvas, la imagen aparecerá en el lugar correcto.
-                // Dibujamos desde el centro (-ancho/2, -alto/2) para que quede bien centrado.
+                // Dibujamos la imagen centrada en este nuevo origen.
                 elements.ctx.drawImage(ringImage, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
-                
-                // Restauramos el canvas a su estado original para el próximo fotograma.
                 elements.ctx.restore();
             }
         }
