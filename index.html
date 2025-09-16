@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; }
-        #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
+        #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         #splash-screen img { max-width: 250px; margin-bottom: 2rem; }
         #splash-screen h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
         #splash-screen p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
@@ -72,7 +72,9 @@
             elements.startButton.addEventListener('click', startArExperience);
             elements.flipButton.addEventListener('click', flipCamera);
             elements.toggleJewelryButton.addEventListener('click', () => elements.jewelryCarousel.classList.toggle('visible'));
-            document.querySelectorAll('.finger').forEach(fingerEl => fingerEl.addEventListener('click', () => selectFinger(fingerEl.dataset.finger)));
+            document.querySelectorAll('.finger').forEach(fingerEl => {
+                fingerEl.addEventListener('click', () => selectFinger(fingerEl.dataset.finger));
+            });
         }
 
         async function startArExperience() {
@@ -118,10 +120,7 @@
                 let midX = (p1.x + p2.x) / 2; let midY = (p1.y + p2.y) / 2;
                 
                 elements.ctx.save();
-                // Corrección para la cámara frontal (modo espejo)
-                if (state.currentFacingMode === 'user') {
-                    midX = elements.canvas.width - midX;
-                }
+                if (state.currentFacingMode === 'user') { midX = elements.canvas.width - midX; }
                 
                 elements.ctx.translate(midX, midY);
                 elements.ctx.rotate(angle);
