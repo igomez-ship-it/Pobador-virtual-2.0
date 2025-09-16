@@ -48,7 +48,7 @@
     </style>
 </head>
 <body>
-    <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"/><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p><button id="start-button" class="cta-button">Empezar</button></div>
+    <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p><button id="start-button" class="cta-button">Empezar</button></div>
     <div id="ar-container">
         <video id="ar-video" playsinline autoplay muted></video>
         <canvas id="ar-canvas"></canvas>
@@ -109,10 +109,168 @@
             state.lastDetections = hands;
             if (hands.length > 0) {
                 // --- ¡LÓGICA CORREGIDA! ---
-                // Si la mano detectada es la IZQUIERDA ('Left'), la UI va a la DERECHA.
-                // Si la mano detectada es la DERECHA ('Right'), la UI va a la IZQUIERDA.
                 const handedness = hands[0].handedness;
-                elements.uiContainer.className = (handedness === 'Left') ? 'ui-element ui-right' : 'ui-element ui-left';
+                if (handedness === 'Left') {
+                    // Si la mano es IZQUIERDA, la UI va a la DERECHA
+                    elements.uiContainer.className = 'ui-element ui-right';
+                } else { // 'Right' o indefinido
+                    // Si la mano es DERECHA, la UI va a la IZQUIERDA
+                    elements.uiContainer.className = 'ui-element ui-left';
+                }
+            }
+        }
+        
+        function renderLoop() {
+            elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+            elements.ctx.save();
+            if (state.currentFacingMode === 'user') { elements.ctx.scale(-1, 1); elements.ctx.drawImage(elements.video, -elements.canvas.width, 0, elements.canvas.width, elements.canvas.height); } else { elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height); }
+            elements.ctx.restore();
+            if (state.lastDetections.length > 0) { drawRing(state.lastDetections); }
+            requestAnimationFrame(renderLoop);
+        }
+
+        function drawRing(hands) {
+            if (!state.activeJewelId) return; const jewel = jewelryCatalog[state.activeJewelId]; if (!jewel || !jewel.loaded) return;
+            for (const hand of hands) {
+                const anchorIndex = fingerMap[state.activeFinger]; if (!anchorIndex) continue;
+                const p1 = hand.keypoints[anchorIndex]; const p2 = hand.keypoints[anchorIndex + 1]; if (!p1 || !p2) continue;
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
+                const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+                const ringWidth = fingerWidth * jewel.scale;
+                const ringHeight = ringWidth * (jewel.image.height / jewel.image.width);
+                let midX = (p1.x + p2.x) / 2; let midY = (p1.y + p2.y) / 2;
+                elements.ctx.save();
+                if (state.currentFacingMode === 'user') { midX = elements.canvas.width - midX; }
+                elements.ctx.translate(midX, midY);
+                elements.ctx.rotate(angle);
+                elements.ctx.drawImage(jewel.image, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
+                elements.ctx.restore();
+            }
+        }
+        
+        initializeApp();
+    });
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Probador Virtual - Vernice</title>
+    <link rel="icon" href="https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; }
+        #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        #splash-screen img { max-width: 250px; margin-bottom: 2rem; }
+        #splash-screen h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        #splash-screen p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
+        .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 20px 40px; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 8px; }
+        #ar-container { width: 100%; height: 100%; position: relative; display: none; }
+        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        #ar-video { display: none; }
+        .ui-element { pointer-events: auto; }
+        #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #flip-camera-button { position: absolute; top: 20px; right: 20px; z-index: 110; background: none; border: none; cursor: pointer; }
+        .flip-camera-icon { background-color: rgba(24,21,22,0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; }
+        #flip-camera-button svg { width: 55%; height: 55%; fill: #D5B488; }
+        #jewelry-selector-container { position: absolute; top: 50%; transform: translateY(-50%); transition: left 0.4s ease, right 0.4s ease; }
+        #ui-container.ui-left #jewelry-selector-container { left: 20px; right: auto; }
+        #ui-container.ui-right #jewelry-selector-container { right: 20px; left: auto; }
+        .jewel-select-button { background-color: rgba(24,21,22,0.8); border: 2px solid #D5B488; color: #D5B488; border-radius: 12px; padding: 10px 15px; font-size: 0.9rem; }
+        #jewelry-carousel { background-color: rgba(24,21,22,0.8); border: 1px solid #D5B488; border-radius: 12px; padding: 15px 10px; display: flex; flex-direction: column; gap: 15px; position: absolute; top: -100%; max-height: 230px; opacity: 0; transition: all 0.3s ease; pointer-events: none; }
+        #ui-container.ui-left #jewelry-carousel { left: 20px; }
+        #ui-container.ui-right #jewelry-carousel { right: 20px; }
+        #jewelry-carousel.visible { opacity: 1; pointer-events: auto; top: calc(50% - 115px - 100px); }
+        .jewel-button { background-color: transparent; border: 3px solid #D5B488; border-radius: 12px; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer; background-size: contain; background-position: center; }
+        .jewel-button.active { border-color: #FFFFFF; }
+        #finger-selector-container { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 200px; height: 150px; }
+        #hand-visual-selector { width: 100%; height: 100%; background-image: url('https://i.ibb.co/hFhNxZGD/Untitled-1-Photoroom.png'); background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: transform 0.4s ease; }
+        #ui-container.ui-right #hand-visual-selector { transform: scaleX(-1); }
+        .finger-hotspot { position: absolute; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s ease; width: 40px; height: 40px; }
+        .finger-hotspot.active { border-color: #D5B488; background-color: rgba(213, 180, 136, 0.3); }
+        .finger-hotspot[data-finger="thumb"]  { top: 90px; left: 15px; }
+        .finger-hotspot[data-finger="index"]  { top: 30px; left: 50px; }
+        .finger-hotspot[data-finger="middle"] { top: 10px; left: 85px; }
+        .finger-hotspot[data-finger="ring"]   { top: 25px; left: 120px; }
+        .finger-hotspot[data-finger="pinky"]  { top: 55px; left: 155px; }
+    </style>
+</head>
+<body>
+    <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p><button id="start-button" class="cta-button">Empezar</button></div>
+    <div id="ar-container">
+        <video id="ar-video" playsinline autoplay muted></video>
+        <canvas id="ar-canvas"></canvas>
+        <div id="ui-container" class="ui-left">
+            <button id="flip-camera-button" class="ui-element"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div></button>
+            <div id="jewelry-selector-container" class="ui-element"><button id="toggle-jewelry-button" class="jewel-select-button">Joyas</button><div id="jewelry-carousel"></div></div>
+            <div id="finger-selector-container" class="ui-element">
+                <div id="hand-visual-selector">
+                    <div class="finger-hotspot" data-finger="thumb"></div>
+                    <div class="finger-hotspot" data-finger="index"></div>
+                    <div class="finger-hotspot" data-finger="middle"></div>
+                    <div class="finger-hotspot active" data-finger="ring"></div>
+                    <div class="finger-hotspot" data-finger="pinky"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), toggleJewelryButton: document.getElementById('toggle-jewelry-button'), jewelryCarousel: document.getElementById('jewelry-carousel'), uiContainer: document.getElementById('ui-container') };
+        const state = { handDetector: null, currentFacingMode: 'environment', activeFinger: 'ring', activeJewelId: null, lastDetections: [], detectionInterval: null };
+        const jewelryCatalog = { 'ring-1': { imageUrl: 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png', image: new Image(), loaded: false, scale: 0.85 }, 'ring-2': { imageUrl: 'https://i.ibb.co/TxVp1Ck4/Montura-Tiffany6unas2aguas1-8mm-r.png', image: new Image(), loaded: false, scale: 0.9 }, 'ring-3': { imageUrl: 'https://i.ibb.co/8Dwj5YkY/Tiffanypave0-03-rosa-round0-50-S.png', image: new Image(), loaded: false, scale: 1.0 } };
+        const fingerMap = { index: 5, middle: 9, ring: 13, pinky: 17, thumb: 2 };
+
+        function initializeApp() {
+            preloadJewelryImages();
+            elements.startButton.addEventListener('click', startArExperience);
+            elements.flipButton.addEventListener('click', flipCamera);
+            elements.toggleJewelryButton.addEventListener('click', () => elements.jewelryCarousel.classList.toggle('visible'));
+            document.querySelectorAll('.finger-hotspot').forEach(button => {
+                button.addEventListener('click', () => selectFinger(button.dataset.finger));
+            });
+        }
+
+        async function startArExperience() {
+            elements.splashScreen.style.display = 'none';
+            elements.arContainer.style.display = 'block';
+            try {
+                await setupCamera();
+                handDetector = await createHandDetector();
+                populateJewelryCarousel();
+                detectionInterval = setInterval(detect, 100);
+                renderLoop();
+            } catch (error) { alert("No se pudo iniciar la experiencia. Revisa los permisos."); }
+        }
+        
+        function preloadJewelryImages() { for (const id in jewelryCatalog) { const jewel = jewelryCatalog[id]; jewel.image.crossOrigin = "anonymous"; jewel.image.src = jewel.imageUrl; jewel.image.onload = () => jewel.loaded = true; } }
+        function populateJewelryCarousel() { let firstJewelId = Object.keys(jewelryCatalog)[0]; for (const id in jewelryCatalog) { const button = document.createElement('button'); button.className = 'jewel-button'; button.id = `jewel-btn-${id}`; button.style.backgroundImage = `url(${jewelryCatalog[id].imageUrl})`; button.onclick = () => selectJewel(id); elements.jewelryCarousel.appendChild(button); } if (firstJewelId) { selectJewel(firstJewelId); } }
+        function selectJewel(id) { state.activeJewelId = id; document.querySelectorAll('.jewel-button').forEach(btn => btn.classList.remove('active')); document.getElementById(`jewel-btn-${id}`).classList.add('active'); }
+        function selectFinger(finger) { state.activeFinger = finger; document.querySelectorAll('.finger-hotspot').forEach(f => f.classList.remove('active')); document.querySelector(`.finger-hotspot[data-finger="${finger}"]`).classList.add('active'); }
+        function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(); }
+        async function setupCamera() { if (elements.video.srcObject) { elements.video.srcObject.getTracks().forEach(t => t.stop()); } const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: state.currentFacingMode } }); elements.video.srcObject = stream; await elements.video.play(); elements.canvas.width = elements.video.videoWidth; elements.canvas.height = elements.video.videoHeight; }
+        async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return handPoseDetection.createDetector(model, config); }
+        
+        async function detect() {
+            if (elements.video.paused || !handDetector) return;
+            const hands = await handDetector.estimateHands(elements.video);
+            state.lastDetections = hands;
+            if (hands.length > 0) {
+                // --- ¡LÓGICA CORREGIDA! ---
+                const handedness = hands[0].handedness;
+                if (handedness === 'Left') {
+                    // Si la mano es IZQUIERDA, la UI va a la DERECHA
+                    elements.uiContainer.className = 'ui-element ui-right';
+                } else { // 'Right' o indefinido
+                    // Si la mano es DERECHA, la UI va a la IZQUIERDA
+                    elements.uiContainer.className = 'ui-element ui-left';
+                }
             }
         }
         
