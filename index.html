@@ -21,33 +21,28 @@
         #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         #ar-video { display: none; }
         
-        /* --- UI ADAPTATIVA --- */
         #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .ui-element { pointer-events: auto; } /* Hacemos que los hijos sí sean clickables */
+        .ui-element { pointer-events: auto; }
 
-        #flip-camera-button { position: absolute; top: 20px; right: 20px; z-index: 110; }
+        #flip-camera-button { position: absolute; top: 20px; right: 20px; z-index: 110; background-color: transparent; border: none; cursor: pointer;}
         .flip-camera-icon { background-color: rgba(24, 21, 22, 0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; }
         #flip-camera-button svg { width: 55%; height: 55%; fill: #D5B488; }
 
-        #jewelry-selector-container { position: absolute; top: 50%; transform: translateY(-50%); }
+        #jewelry-selector-container { position: absolute; top: 50%; transform: translateY(-50%); transition: left 0.3s ease, right 0.3s ease; }
         .jewel-select-button { background-color: rgba(24, 21, 22, 0.8); border: 2px solid #D5B488; color: #D5B488; border-radius: 12px; padding: 10px 15px; font-size: 0.9rem; }
         
-        #jewelry-carousel { background-color: rgba(24, 21, 22, 0.8); border: 1px solid #D5B488; border-radius: 12px; padding: 15px 10px; display: flex; flex-direction: column; gap: 15px; position: absolute; top: calc(50% - 115px); max-height: 230px; overflow-y: auto; scrollbar-width: none; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        #jewelry-carousel { background-color: rgba(24, 21, 22, 0.8); border: 1px solid #D5B488; border-radius: 12px; padding: 15px 10px; display: flex; flex-direction: column; gap: 15px; position: absolute; top: calc(50% - 115px); max-height: 230px; overflow-y: auto; scrollbar-width: none; opacity: 0; transition: all 0.3s ease; pointer-events: none; }
         #jewelry-carousel.visible { opacity: 1; pointer-events: auto; }
         .jewel-button { background-color: transparent; border: 3px solid #D5B488; border-radius: 12px; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer; background-size: contain; background-position: center; }
         .jewel-button.active { border-color: #FFFFFF; }
         
-        /* Posicionamiento por lateralidad */
-        #ui-container.ui-left #jewelry-selector-container { left: 20px; }
-        #ui-container.ui-left #jewelry-carousel { left: 20px; }
-        #ui-container.ui-right #jewelry-selector-container { right: 20px; }
-        #ui-container.ui-right #jewelry-carousel { right: 20px; }
+        #ui-container.ui-left #jewelry-selector-container, #ui-container.ui-left #jewelry-carousel { left: 20px; right: auto; }
+        #ui-container.ui-right #jewelry-selector-container, #ui-container.ui-right #jewelry-carousel { right: 20px; left: auto; }
 
-        #finger-selector-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
+        #finger-selector-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(24, 21, 22, 0.8); border-radius: 15px; padding: 10px; }
         .hand-svg { width: 180px; height: 120px; display: none; }
         .hand-svg .finger { fill: #5c5c5c; cursor: pointer; transition: fill 0.2s ease; }
         .hand-svg .finger.active { fill: #D5B488; }
-        .hand-svg .palm { fill: transparent; }
     </style>
 </head>
 <body>
@@ -59,20 +54,107 @@
             <button id="flip-camera-button" class="ui-element" title="Girar Cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div></button>
             <div id="jewelry-selector-container" class="ui-element"><button id="toggle-jewelry-button" class="jewel-select-button">Joyas</button><div id="jewelry-carousel"></div></div>
             <div id="finger-selector-container" class="ui-element">
-                <!-- Mano Derecha -->
-                <svg id="hand-right-svg" class="hand-svg" viewBox="0 0 200 160"> <path class="palm" d="..."/> <path id="finger-right-index" class="finger" data-finger="index" d="..."/> <path id="finger-right-middle" class="finger" data-finger="middle" d="..."/> <path id="finger-right-ring" class="finger active" data-finger="ring" d="..."/> <path id="finger-right-pinky" class="finger" data-finger="pinky" d="..."/> <path id="finger-right-thumb" class="finger" data-finger="thumb" d="..."/> </svg>
-                <!-- Mano Izquierda -->
-                <svg id="hand-left-svg" class="hand-svg" viewBox="0 0 200 160"> <path class="palm" d="..."/> <path id="finger-left-index" class="finger" data-finger="index" d="..."/> <path id="finger-left-middle" class="finger" data-finger="middle" d="..."/> <path id="finger-left-ring" class="finger active" data-finger="ring" d="..."/> <path id="finger-left-pinky" class="finger" data-finger="pinky" d="..."/> <path id="finger-left-thumb" class="finger" data-finger="thumb" d="..."/> </svg>
+                <!-- SVG MANO DERECHA CON PATHS COMPLETOS -->
+                <svg id="hand-right-svg" class="hand-svg" viewBox="0 0 200 160"><path d="M178.7,92.5c-4.2-1.2-12.2-2.8-15.6-3.8c-1.8-0.5-3.3-1.8-4.2-3.4c-3.1-5.7-6.2-11.4-9.2-17.1c-1-1.9-2.9-3.1-5-3.1h-19.1c-3.1,0-5.9,2.5-5.9,5.6v37.3c0,3.1,2.6,5.6,5.9,5.6h17.4c2.8,0,5.1-2.3,5.1-5.1v-9.6c0-2.8,2.3-5.1,5.1-5.1h15.2c2.8,0,5.1-2.3,5.1-5.1v-0.1C182.5,95.3,180.9,93.2,178.7,92.5z M125.7,59.3H107c-2.1,0-4.1-1.2-5-3.1C98.9,50,95.8,44.3,92.7,38.6c-0.9-1.7-2.4-2.8-4.2-3.4c-3.4-1-11.4-2.6-15.6-3.8c-2.2-0.6-4.6,0.9-5.1,3.2l-0.1,0.1v50.2c0,3.1,2.6,5.6,5.9,5.6h17.4c3.1,0,5.9-2.5,5.9-5.6V48.1c0-3.1,2.6-5.6,5.9-5.6h18.1C123.6,42.5,125.7,59.3,125.7,59.3z M71.7,29.3c-1.8-0.5-3.3-1.8-4.2-3.4c-3.1-5.7-6.2-11.4-9.2-17.1c-1-1.9-2.9-3.1-5-3.1H34c-3.1,0-5.9,2.5-5.9,5.6v68.9c0,3.1,2.6,5.6,5.9,5.6h17.4c3.1,0,5.9-2.5,5.9-5.6V45c0-3.1,2.6-5.6,5.9-5.6h18.9c2.1,0,4.1-1.2,5-3.1C80.8,30.3,76,29.9,71.7,29.3z M34,103.9h17.4c2.8,0,5.1-2.3,5.1-5.1v-5.6c0-2.8-2.3-5.1-5.1-5.1H34c-2.8,0-5.1,2.3-5.1,5.1v5.6C28.9,101.6,31.2,103.9,34,103.9z M131.6,121.1h17.4c2.8,0,5.1-2.3,5.1-5.1v-20.2c0-2.8-2.3-5.1-5.1-5.1h-17.4c-2.8,0-5.1,2.3-5.1,5.1v20.2C126.5,118.8,128.8,121.1,131.6,121.1z"/><path id="finger-right-index" class="finger" data-finger="index" d="M71.7,29.3c-1.8-0.5-3.3-1.8-4.2-3.4c-3.1-5.7-6.2-11.4-9.2-17.1c-1-1.9-2.9-3.1-5-3.1H34c-3.1,0-5.9,2.5-5.9,5.6v68.9c0,3.1,2.6,5.6,5.9,5.6h17.4c3.1,0,5.9-2.5,5.9-5.6V45c0-3.1,2.6-5.6,5.9-5.6h18.9c2.1,0,4.1-1.2,5-3.1C80.8,30.3,76,29.9,71.7,29.3z"/><path id="finger-right-middle" class="finger" data-finger="middle" d="M125.7,59.3H107c-2.1,0-4.1-1.2-5-3.1C98.9,50,95.8,44.3,92.7,38.6c-0.9-1.7-2.4-2.8-4.2-3.4c-3.4-1-11.4-2.6-15.6-3.8c-2.2-0.6-4.6,0.9-5.1,3.2l-0.1,0.1v50.2c0,3.1,2.6,5.6,5.9,5.6h17.4c3.1,0,5.9-2.5,5.9-5.6V48.1c0-3.1,2.6-5.6,5.9-5.6h18.1C123.6,42.5,125.7,59.3,125.7,59.3z"/><path id="finger-right-ring" class="finger active" data-finger="ring" d="M120.1,105.3v-37c0-3.1-2.6-5.6-5.9-5.6h-19.1c-2.1,0-4.1,1.2-5,3.1c-3.1,5.7-6.2,11.4-9.2,17.1c-0.9,1.7-2.4,2.8-4.2,3.4c-3.4,1-11.4,2.6-15.6,3.8c-2.2,0.6-3.8,2.7-3.8,5.1v0.1c0,3.1,2.6,5.6,5.9,5.6h17.4c3.1,0,5.9-2.5,5.9-5.6v-9.6c0-3.1,2.6-5.6,5.9-5.6h15.2C117.5,99.7,120.1,102.2,120.1,105.3z"/><path id="finger-right-pinky" class="finger" data-finger="pinky" d="M178.7,92.5c-4.2-1.2-12.2-2.8-15.6-3.8c-1.8-0.5-3.3-1.8-4.2-3.4c-3.1-5.7-6.2-11.4-9.2-17.1c-1-1.9-2.9-3.1-5-3.1h-19.1c-3.1,0-5.9,2.5-5.9,5.6v37.3c0,3.1,2.6,5.6,5.9,5.6h17.4c2.8,0,5.1-2.3,5.1-5.1v-9.6c0-2.8,2.3-5.1,5.1-5.1h15.2c2.8,0,5.1-2.3,5.1-5.1v-0.1C182.5,95.3,180.9,93.2,178.7,92.5z"/><path id="finger-right-thumb" class="finger" data-finger="thumb" d="M34,103.9h17.4c2.8,0,5.1-2.3,5.1-5.1v-5.6c0-2.8-2.3-5.1-5.1-5.1H34c-2.8,0-5.1,2.3-5.1,5.1v5.6C28.9,101.6,31.2,103.9,34,103.9z"/></svg>
+                <!-- SVG MANO IZQUIERDA CON PATHS COMPLETOS -->
+                <svg id="hand-left-svg" class="hand-svg" viewBox="0 0 200 160"><path d="M21.3,92.5c4.2-1.2,12.2-2.8,15.6-3.8c1.8-0.5,3.3-1.8,4.2-3.4c3.1-5.7,6.2-11.4,9.2-17.1c1-1.9,2.9-3.1,5-3.1h19.1c3.1,0,5.9,2.5,5.9,5.6v37.3c0,3.1-2.6,5.6-5.9,5.6H62.9c-2.8,0-5.1-2.3-5.1-5.1v-9.6c0-2.8-2.3-5.1-5.1-5.1H37.5c-2.8,0-5.1-2.3-5.1-5.1v-0.1C27.5,95.3,23.1,93.2,21.3,92.5z M74.3,59.3h18.7c2.1,0,4.1-1.2,5-3.1c3.1-5.7,6.2-11.4,9.2-17.1c0.9-1.7,2.4-2.8,4.2-3.4c3.4-1,11.4-2.6,15.6-3.8c2.2-0.6,4.6,0.9,5.1,3.2l0.1,0.1v50.2c0,3.1-2.6,5.6-5.9,5.6H111c-3.1,0-5.9-2.5-5.9-5.6V48.1c0-3.1-2.6-5.6-5.9-5.6H80.5C78.4,42.5,74.3,59.3,74.3,59.3z M128.3,29.3c1.8-0.5,3.3-1.8,4.2-3.4c3.1-5.7,6.2-11.4,9.2-17.1c1-1.9,2.9-3.1,5-3.1h19.1c3.1,0,5.9,2.5,5.9,5.6v68.9c0,3.1-2.6,5.6-5.9,5.6h-17.4c-3.1,0-5.9-2.5-5.9-5.6V45c0-3.1-2.6-5.6-5.9-5.6h-18.9c-2.1,0-4.1-1.2-5-3.1C120.2,30.3,124,29.9,128.3,29.3z M166,103.9h-17.4c-2.8,0-5.1-2.3-5.1-5.1v-5.6c0-2.8,2.3-5.1,5.1-5.1H166c2.8,0,5.1,2.3,5.1,5.1v5.6C171.1,101.6,168.8,103.9,166,103.9z M68.4,121.1H51c-2.8,0-5.1-2.3-5.1-5.1v-20.2c0-2.8,2.3-5.1,5.1-5.1h17.4c2.8,0,5.1,2.3,5.1,5.1v20.2C73.5,118.8,71.2,121.1,68.4,121.1z"/><path id="finger-left-index" class="finger" data-finger="index" d="M128.3,29.3c1.8-0.5,3.3-1.8,4.2-3.4c3.1-5.7,6.2-11.4,9.2-17.1c1-1.9,2.9-3.1,5-3.1h19.1c3.1,0,5.9,2.5,5.9,5.6v68.9c0,3.1-2.6,5.6-5.9,5.6h-17.4c-3.1,0-5.9-2.5-5.9-5.6V45c0-3.1-2.6-5.6-5.9-5.6h-18.9c-2.1,0-4.1-1.2-5-3.1C120.2,30.3,124,29.9,128.3,29.3z"/><path id="finger-left-middle" class="finger" data-finger="middle" d="M74.3,59.3h18.7c2.1,0,4.1-1.2,5-3.1c3.1-5.7,6.2-11.4,9.2-17.1c0.9-1.7,2.4-2.8,4.2-3.4c3.4-1,11.4-2.6,15.6-3.8c2.2-0.6,4.6,0.9,5.1,3.2l0.1,0.1v50.2c0,3.1-2.6,5.6-5.9,5.6H111c-3.1,0-5.9-2.5-5.9-5.6V48.1c0-3.1-2.6-5.6-5.9-5.6H80.5C78.4,42.5,74.3,59.3,74.3,59.3z"/><path id="finger-left-ring" class="finger active" data-finger="ring" d="M79.9,105.3v-37c0-3.1,2.6-5.6,5.9-5.6h19.1c2.1,0,4.1,1.2,5,3.1c3.1,5.7,6.2,11.4,9.2,17.1c0.9,1.7,2.4,2.8,4.2,3.4c3.4,1,11.4,2.6,15.6,3.8c2.2,0.6,3.8,2.7,3.8,5.1v0.1c0,3.1-2.6,5.6-5.9,5.6h-17.4c-3.1,0-5.9-2.5-5.9-5.6v-9.6c0-3.1-2.6-5.6-5.9-5.6H94.1C82.5,99.7,79.9,102.2,79.9,105.3z"/><path id="finger-left-pinky" class="finger" data-finger="pinky" d="M21.3,92.5c4.2-1.2,12.2-2.8,15.6-3.8c1.8-0.5,3.3-1.8,4.2-3.4c3.1-5.7,6.2-11.4,9.2-17.1c1-1.9,2.9-3.1,5-3.1h19.1c3.1,0,5.9,2.5,5.9,5.6v37.3c0,3.1-2.6,5.6-5.9,5.6H62.9c-2.8,0-5.1-2.3-5.1-5.1v-9.6c0-2.8-2.3-5.1-5.1-5.1H37.5c-2.8,0-5.1-2.3-5.1-5.1v-0.1C27.5,95.3,23.1,93.2,21.3,92.5z"/><path id="finger-left-thumb" class="finger" data-finger="thumb" d="M166,103.9h-17.4c-2.8,0-5.1-2.3-5.1-5.1v-5.6c0-2.8,2.3-5.1,5.1-5.1H166c2.8,0,5.1,2.3,5.1,5.1v5.6C171.1,101.6,168.8,103.9,166,103.9z"/></svg>
             </div>
         </div>
     </div>
 
     <script>
-    // --- [El resto del código JavaScript va aquí] ---
-    // [He omitido el bloque JS por brevedad, pero usaría una versión
-    // actualizada del código anterior que incluya la detección de 
-    // handedness (Left/Right) desde 'lastDetections' para cambiar la clase 
-    // de #ui-container y la visibilidad de los SVGs de las manos.]
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Referencias y Estado ---
+        const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), toggleJewelryButton: document.getElementById('toggle-jewelry-button'), jewelryCarousel: document.getElementById('jewelry-carousel'), uiContainer: document.getElementById('ui-container'), handLeftSvg: document.getElementById('hand-left-svg'), handRightSvg: document.getElementById('hand-right-svg') };
+        const state = { handDetector: null, currentFacingMode: 'environment', activeFinger: 'ring', activeJewelId: null, lastDetections: [], detectionInterval: null };
+        const jewelryCatalog = { 'ring-1': { imageUrl: 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png', image: new Image(), loaded: false, scale: 0.85 }, 'ring-2': { imageUrl: 'https://i.ibb.co/TxVp1Ck4/Montura-Tiffany6unas2aguas1-8mm-r.png', image: new Image(), loaded: false, scale: 0.9 }, 'ring-3': { imageUrl: 'https://i.ibb.co/8Dwj5YkY/Tiffanypave0-03-rosa-round0-50-S.png', image: new Image(), loaded: false, scale: 1.0 } };
+        const fingerMap = { index: 5, middle: 9, ring: 13, pinky: 17, thumb: 1 }; // Incluimos pulgar y meñique
+
+        // --- Inicialización ---
+        function initializeApp() {
+            preloadJewelryImages();
+            elements.startButton.addEventListener('click', startArExperience);
+            elements.flipButton.addEventListener('click', flipCamera);
+            elements.toggleJewelryButton.addEventListener('click', () => elements.jewelryCarousel.classList.toggle('visible'));
+            document.querySelectorAll('.finger').forEach(fingerEl => {
+                fingerEl.addEventListener('click', () => selectFinger(fingerEl.dataset.finger));
+            });
+        }
+
+        // --- Lógica Principal ---
+        async function startArExperience() { /* ... */ }
+        function preloadJewelryImages() { /* ... */ }
+        function populateJewelryCarousel() { /* ... */ }
+        function selectJewel(id) { /* ... */ }
+        function flipCamera() { /* ... */ }
+        async function setupCamera() { /* ... */ }
+        async function createHandDetector() { /* ... */ }
+
+        function selectFinger(finger) {
+            state.activeFinger = finger;
+            document.querySelectorAll('.finger').forEach(f => f.classList.remove('active'));
+            document.querySelectorAll(`.finger[data-finger="${finger}"]`).forEach(f => f.classList.add('active'));
+        }
+
+        async function detect() {
+            if (elements.video.paused || !state.handDetector) return;
+            const hands = await state.handDetector.estimateHands(elements.video);
+            state.lastDetections = hands;
+
+            // --- ¡LA MAGIA DE LA UI ADAPTATIVA! ---
+            if (hands.length > 0) {
+                const handedness = hands[0].handedness; // "Left" o "Right"
+                if (handedness === 'Left') {
+                    elements.uiContainer.className = 'ui-right';
+                    elements.handLeftSvg.style.display = 'block';
+                    elements.handRightSvg.style.display = 'none';
+                } else {
+                    elements.uiContainer.className = 'ui-left';
+                    elements.handRightSvg.style.display = 'block';
+                    elements.handLeftSvg.style.display = 'none';
+                }
+            }
+        }
+
+        function renderLoop() {
+            elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+            elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height);
+            if (state.lastDetections.length > 0) {
+                drawRing(state.lastDetections);
+            }
+            requestAnimationFrame(renderLoop);
+        }
+
+        function drawRing(hands) {
+            if (!state.activeJewelId) return;
+            const jewel = jewelryCatalog[state.activeJewelId];
+            if (!jewel || !jewel.loaded) return;
+            
+            for (const hand of hands) {
+                const anchorIndex = fingerMap[state.activeFinger];
+                if (!anchorIndex) continue;
+                
+                const p1 = (anchorIndex === 1) ? hand.keypoints[2] : hand.keypoints[anchorIndex]; // Lógica especial para el pulgar
+                const p2 = (anchorIndex === 1) ? hand.keypoints[3] : hand.keypoints[anchorIndex + 1];
+                if (!p1 || !p2) continue;
+
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
+                const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+                const ringWidth = fingerWidth * jewel.scale;
+                const ringHeight = ringWidth * (jewel.image.height / jewel.image.width);
+                const midX = (p1.x + p2.x) / 2;
+                const midY = (p1.y + p2.y) / 2;
+                
+                elements.ctx.save();
+                elements.ctx.translate(midX, midY);
+                elements.ctx.rotate(angle);
+                elements.ctx.drawImage(jewel.image, -ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight);
+                elements.ctx.restore();
+            }
+        }
+
+        initializeApp();
+    });
     </script>
 </body>
 </html>
