@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Probador Virtual - Vernice</title>
     
-    <link rel="icon" href="https://i.ibb.co/xp3QL7W/LOGOnegro-Original.png" type="image/png">
+    <link rel="icon" href="https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
@@ -18,6 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
 
     <style>
+        /* (El CSS no necesita cambios) */
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; -webkit-tap-highlight-color: transparent; }
         #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; transition: opacity 0.5s ease-out; }
         #splash-screen img { max-width: 250px; margin-bottom: 2rem; filter: drop-shadow(0 0 15px rgba(213, 180, 136, 0.7)); }
@@ -40,132 +41,73 @@
         .loading-spinner { width: 50px; height: 50px; border: 5px solid rgba(213, 180, 136, 0.3); border-top-color: #D5B488; border-radius: 50%; animation: spin 1s linear infinite; }
         #loading-text { color: #FFFFFF; font-size: 1.2rem; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
-        /* --- ¡NUEVO! ESTILOS PARA LA VITRINA DE JOYAS --- */
-        #jewelry-carousel-container {
-            position: absolute; bottom: 20px; left: 0; width: 100%;
-            display: none; /* Empezará oculto */
-            z-index: 110; /* Por encima del selector principal */
-        }
-        #jewelry-carousel {
-            display: flex; gap: 15px;
-            padding: 0 20px;
-            overflow-x: auto; /* Permite el scroll horizontal */
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        #jewelry-carousel::-webkit-scrollbar { display: none; } /* Oculta la barra de scroll en Chrome, Safari */
-        .jewel-button {
-            background-color: rgba(24, 21, 22, 0.7);
-            border: 3px solid #D5B488;
-            border-radius: 12px;
-            width: 70px; height: 70px;
-            flex-shrink: 0; /* Evita que los botones se encojan */
-            cursor: pointer;
-            background-size: contain;
-            background-position: center;
-            background-repeat: no-repeat;
-            transition: all 0.2s ease;
-        }
-        .jewel-button.active {
-            border-color: #FFFFFF; /* Borde blanco para el activo */
-            transform: scale(1.1);
-        }
+        #jewelry-carousel-container { position: absolute; bottom: 20px; left: 0; width: 100%; display: none; z-index: 110; }
+        #jewelry-carousel { display: flex; gap: 15px; padding: 0 20px; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
+        #jewelry-carousel::-webkit-scrollbar { display: none; }
+        .jewel-button { background-color: rgba(24, 21, 22, 0.7); border: 3px solid #D5B488; border-radius: 12px; width: 70px; height: 70px; flex-shrink: 0; cursor: pointer; background-size: contain; background-position: center; background-repeat: no-repeat; transition: all 0.2s ease; }
+        .jewel-button.active { border-color: #FFFFFF; transform: scale(1.1); }
     </style>
 </head>
 <body>
     <div id="splash-screen"><img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice"><h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente con una experiencia en tiempo real.</p><button id="start-button" class="cta-button">Empezar</button></div>
-    <div id="ar-container">
-        <div id="loading-overlay"><div class="loading-spinner"></div><span id="loading-text">Cargando IA...</span></div>
-        <button id="flip-camera-button" title="Cambiar cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div><span>Girar</span></button>
-        <div id="jewelry-selector"><button class="selector-button active" id="select-hand">Anillos</button><button class="selector-button" id="select-face">Collares</button></div>
-        <!-- ¡NUEVO! Contenedor para la Vitrina -->
-        <div id="jewelry-carousel-container">
-            <div id="jewelry-carousel"></div>
-        </div>
-        <video id="ar-video" playsinline autoplay muted></video><canvas id="ar-canvas"></canvas>
-    </div>
+    <div id="ar-container"><div id="loading-overlay"><div class="loading-spinner"></div><span id="loading-text">Cargando IA...</span></div><button id="flip-camera-button" title="Cambiar cámara"><div class="flip-camera-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></div><span>Girar</span></button><div id="jewelry-selector"><button class="selector-button active" id="select-hand">Anillos</button><button class="selector-button" id="select-face">Collares</button></div><div id="jewelry-carousel-container"><div id="jewelry-carousel"></div></div><video id="ar-video" playsinline autoplay muted></video><canvas id="ar-canvas"></canvas></div>
 
     <script>
+    // --- EL CÓDIGO SOLO SE EJECUTA CUANDO EL HTML ESTÁ 100% LISTO ---
+    document.addEventListener('DOMContentLoaded', () => {
+
         const elements = { splashScreen: document.getElementById('splash-screen'), startButton: document.getElementById('start-button'), arContainer: document.getElementById('ar-container'), video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d'), flipButton: document.getElementById('flip-camera-button'), handButton: document.getElementById('select-hand'), faceButton: document.getElementById('select-face'), loadingOverlay: document.getElementById('loading-overlay'), watermark: new Image(), jewelryCarouselContainer: document.getElementById('jewelry-carousel-container'), jewelryCarousel: document.getElementById('jewelry-carousel') };
         const state = { handDetector: null, faceDetector: null, currentFacingMode: 'environment', activeDetectorType: 'hand', activeJewelId: null, lastDetections: [], detectionInterval: null };
-        const VERNICE_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAMAAAAJbSJIAAAAbFBMVEUAAAD///8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB8PEB+B4XgpAAAAI3RSTlMA9wgJDPv19/f39/f39/f39/f39/f39/f19/f39wgJDAwz2ko+AAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAoNJREFUeJzt3e1y20AYBVGAlKCAiIsghxwhcIqE/v+XFRs1YAwJ5PTs2P1pWz3B6b2Z8A4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAALizc3p/sO/5m3O6n5GPhv/D4T3N6X4m3f5Q9f2s+TfCH3z5y/k/8g8JHyR8kPBBYgLhJ/z352+GfGTCByU+kPBBYgLhJ3z352+GfGTCByU+kPBBYgLhJ/z052+GfGTCByU+kPBBYgLhJ3z052+GfGTCByU+kPBBYgLhJ3zy52+GfGTCByU+kPBBYgLhJzz587dBPjLhgxIfSPggsYDwEx57/uYwZMIHJb6Q8EFiAeEnPPT8zWFIhA9KfCDhg8QCwk944PmbsxAhH5nwwYkPhJ8x4YMTn4oPEn5mwoeZ+Cjho5YPhJ8x4cNMfBTw0csHwk8Y8GGmPgr4aOWD8BEGPMzERwEf3Xwg/IABDzPxUcBDNx8IP2DAg0x8FPDQzQfCRxjwwJkIHyV88OFB+AgDHnwj4YOCRQg/Y8CDS0T4KOGDBQg/YsCDyUT4KOGjBgg/Y8CD+UT4KOGTBwg/Y8CD2UT4KOGTCAg/Y8CD6UT4KOGTCAg/YsCD2UT4KOGTCQg/YsCDmUT4KOGTDAg/YsCDmUT4aB0hfMQAB81mwoeZ+CDho3UI4SMcON1sJnyYCQ8k/EjjB8JnOHDCbCZ8mAkPJvyo/ED4CAcON5sJHybhQYQ/KT8QPsCBY81mwoeZ8GDCDy4fCB9gwLEmk/BhJjyY8IPLB8IHGHCsmQwfZsKDBx/4fCB8gAFHmkzCh5nwYMAPLh8IH2DAkWYyfZgJDyb8oPxA+AgHDjSb6cNM+DDhh5YPhJ9w4ECzGT/MhA8TfujyAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAuNM/M60uQUYpxx0AAAAASUVORKCYII=';
-
-        // --- ¡CATÁLOGO AMPLIADO! ---
+        
+        // --- INGREDIENTES FRESCOS Y VERIFICADOS ---
+        const VERNICE_LOGO_URL = 'https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png';
         const jewelryCatalog = {
             'ring-1': { type: 'hand', imageUrl: 'https://i.ibb.co/L5r9961/anillo-plata-1.png', image: new Image(), loaded: false, anchorPointIndex: 5, scale: 1.5, offsetY: 20 },
             'ring-2': { type: 'hand', imageUrl: 'https://i.ibb.co/ckr2Y46/anillo-plata-2.png', image: new Image(), loaded: false, anchorPointIndex: 5, scale: 1.8, offsetY: 25 },
             'ring-3': { type: 'hand', imageUrl: 'https://i.ibb.co/yqgJp7v/anillo-plata-3.png', image: new Image(), loaded: false, anchorPointIndex: 5, scale: 1.6, offsetY: 15 }
-            // Podríamos añadir collares con type: 'face'
         };
 
-        const assetsReadyPromise = new Promise((resolve) => { elements.watermark.src = VERNICE_LOGO_BASE64; elements.watermark.onload = () => { console.log("Assets pre-cargados (logo)."); resolve(); }; elements.watermark.onerror = (err) => { console.error("Error crítico al cargar el logo Base64.", err); resolve(); } });
-        
-        function initializeEventListeners() { elements.startButton.addEventListener('click', startArExperience); elements.flipButton.addEventListener('click', flipCamera); elements.handButton.addEventListener('click', () => switchDetector('hand')); elements.faceButton.addEventListener('click', () => switchDetector('face')); console.log("Listeners de la UI activados."); }
+        const assetsReadyPromise = new Promise((resolve) => {
+            elements.watermark.src = VERNICE_LOGO_URL;
+            elements.watermark.onload = () => { console.log("Assets pre-cargados (logo)."); resolve(); };
+            elements.watermark.onerror = (err) => { console.error("Error crítico al cargar el logo.", err); resolve(); }
+        });
+
+        function initializeEventListeners() {
+            elements.startButton.addEventListener('click', startArExperience);
+            elements.flipButton.addEventListener('click', flipCamera);
+            elements.handButton.addEventListener('click', () => switchDetector('hand'));
+            elements.faceButton.addEventListener('click', () => switchDetector('face'));
+            console.log("Listeners de la UI activados.");
+        }
 
         async function startArExperience() {
+            console.log("Botón 'Empezar' detectado. Iniciando secuencia...");
             preloadJewelryImages();
             await assetsReadyPromise; 
+            console.log("Confirmado: Assets listos. Procediendo...");
+            
             elements.splashScreen.style.opacity = '0';
             setTimeout(() => elements.splashScreen.style.display = 'none', 500);
             elements.arContainer.style.display = 'block';
+
             await setupCamera(state.currentFacingMode);
             await switchDetector('hand');
             renderLoop();
         }
-
-        function preloadJewelryImages() { for (const id in jewelryCatalog) { const jewel = jewelryCatalog[id]; jewel.image.src = jewel.imageUrl; jewel.image.onload = () => { jewel.loaded = true; console.log(`Joya '${id}' cargada.`); }; } }
         
-        // --- ¡LÓGICA DE UI ACTUALIZADA! ---
-        async function switchDetector(type) {
-            if (state.detectionInterval) clearInterval(state.detectionInterval);
-            state.activeDetectorType = type;
-            state.lastDetections = [];
-            elements.handButton.classList.toggle('active', type === 'hand');
-            elements.faceButton.classList.toggle('active', type === 'face');
-            
-            // Mostramos o escondemos la vitrina de joyas
-            if (type === 'hand') {
-                populateJewelryCarousel('hand');
-                elements.jewelryCarouselContainer.style.display = 'block';
-                elements.jewelrySelector.style.display = 'none'; // Ocultamos el selector principal
-            } else {
-                elements.jewelryCarouselContainer.style.display = 'none';
-                elements.jewelrySelector.style.display = 'flex'; // Mostramos el selector principal
-            }
-
-            try { if (type === 'hand' && !state.handDetector) { elements.loadingOverlay.style.display = 'flex'; state.handDetector = await createHandDetector(); } else if (type === 'face' && !state.faceDetector) { elements.loadingOverlay.style.display = 'flex'; state.faceDetector = await createFaceDetector(); } } catch (error) { console.error(`Error al cargar detector ${type}:`, error); } finally { elements.loadingOverlay.style.display = 'none'; }
-            state.detectionInterval = setInterval(detect, 100);
+        function preloadJewelryImages() { 
+            for (const id in jewelryCatalog) { 
+                const jewel = jewelryCatalog[id]; 
+                jewel.image.src = jewel.imageUrl; 
+                jewel.image.onload = () => { jewel.loaded = true; console.log(`Joya '${id}' cargada.`); };
+                jewel.image.onerror = () => { console.error(`Error al cargar la joya '${id}' desde ${jewel.imageUrl}`); }
+            } 
         }
-
-        // --- ¡NUEVAS FUNCIONES PARA LA VITRINA! ---
-        function populateJewelryCarousel(type) {
-            elements.jewelryCarousel.innerHTML = ''; // Limpiamos la vitrina
-            let firstJewelId = null;
-            for (const id in jewelryCatalog) {
-                if (jewelryCatalog[id].type === type) {
-                    if (!firstJewelId) firstJewelId = id; // Guardamos el ID del primer anillo
-                    const button = document.createElement('button');
-                    button.className = 'jewel-button';
-                    button.id = `jewel-btn-${id}`;
-                    button.style.backgroundImage = `url(${jewelryCatalog[id].imageUrl})`;
-                    button.onclick = () => selectJewel(id);
-                    elements.jewelryCarousel.appendChild(button);
-                }
-            }
-            if (firstJewelId) {
-                selectJewel(firstJewelId); // Seleccionamos el primer anillo por defecto
-            }
-        }
-
-        function selectJewel(id) {
-            state.activeJewelId = id;
-            // Actualizamos la clase 'active' en los botones
-            document.querySelectorAll('.jewel-button').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`jewel-btn-${id}`).classList.add('active');
-        }
-
-        // --- El resto del código no necesita cambios ---
+        
+        async function switchDetector(type) { if (state.detectionInterval) clearInterval(state.detectionInterval); state.activeDetectorType = type; state.lastDetections = []; elements.handButton.classList.toggle('active', type === 'hand'); elements.faceButton.classList.toggle('active', type === 'face'); if (type === 'hand') { populateJewelryCarousel('hand'); elements.jewelryCarouselContainer.style.display = 'block'; elements.jewelrySelector.style.display = 'none'; } else { elements.jewelryCarouselContainer.style.display = 'none'; elements.jewelrySelector.style.display = 'flex'; } try { if (type === 'hand' && !state.handDetector) { elements.loadingOverlay.style.display = 'flex'; state.handDetector = await createHandDetector(); } else if (type === 'face' && !state.faceDetector) { elements.loadingOverlay.style.display = 'flex'; state.faceDetector = await createFaceDetector(); } } catch (error) { console.error(`Error al cargar detector ${type}:`, error); } finally { elements.loadingOverlay.style.display = 'none'; } state.detectionInterval = setInterval(detect, 100); }
+        function populateJewelryCarousel(type) { elements.jewelryCarousel.innerHTML = ''; let firstJewelId = null; for (const id in jewelryCatalog) { if (jewelryCatalog[id].type === type) { if (!firstJewelId) firstJewelId = id; const button = document.createElement('button'); button.className = 'jewel-button'; button.id = `jewel-btn-${id}`; button.style.backgroundImage = `url(${jewelryCatalog[id].imageUrl})`; button.onclick = () => selectJewel(id); elements.jewelryCarousel.appendChild(button); } } if (firstJewelId) { selectJewel(firstJewelId); } }
+        function selectJewel(id) { state.activeJewelId = id; document.querySelectorAll('.jewel-button').forEach(btn => btn.classList.remove('active')); document.getElementById(`jewel-btn-${id}`).classList.add('active'); }
         function flipCamera() { state.currentFacingMode = (state.currentFacingMode === 'user') ? 'environment' : 'user'; setupCamera(state.currentFacingMode); }
         async function createHandDetector() { const model = handPoseDetection.SupportedModels.MediaPipeHands; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return await handPoseDetection.createDetector(model, detectorConfig); }
         async function createFaceDetector() { const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh; const detectorConfig = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh' }; return await faceLandmarksDetection.createDetector(model, detectorConfig); }
@@ -173,30 +115,11 @@
         async function detect() { if (elements.video.paused || elements.video.ended || elements.video.readyState < 4) return; let detections = []; const detector = state.activeDetectorType === 'hand' ? state.handDetector : state.faceDetector; if (!detector) return; if (state.activeDetectorType === 'hand') { detections = await detector.estimateHands(elements.video); } else { detections = await detector.estimateFaces(elements.video); } state.lastDetections = detections; }
         function renderLoop() { elements.ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height); elements.ctx.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height); drawWatermark(); if (state.lastDetections.length > 0) { if (state.activeDetectorType === 'hand') drawHandJewelry(state.lastDetections); else if (state.activeDetectorType === 'face') drawFaceLandmarks(state.lastDetections); } requestAnimationFrame(renderLoop); }
         function drawWatermark() { if (!elements.watermark.complete || elements.watermark.naturalWidth === 0) { return; } const size = Math.min(elements.canvas.width, elements.canvas.height) * 0.08; const padding = 20; elements.ctx.save(); elements.ctx.globalAlpha = 0.6; if (state.currentFacingMode === 'user') { elements.ctx.scale(-1, 1); elements.ctx.drawImage(elements.watermark, -size - padding, padding, size, size); } else { elements.ctx.drawImage(elements.watermark, padding, padding, size, size); } elements.ctx.restore(); }
-        
-        function drawHandJewelry(hands) {
-            if (!state.activeJewelId) return;
-            const jewel = jewelryCatalog[state.activeJewelId];
-            if (!jewel || !jewel.loaded) return;
-            for (const hand of hands) {
-                const p1 = hand.keypoints[jewel.anchorPointIndex];
-                const p2 = hand.keypoints[jewel.anchorPointIndex + 1];
-                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-                const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-                elements.ctx.save();
-                elements.ctx.translate(p1.x, p1.y);
-                elements.ctx.rotate(angle);
-                elements.ctx.translate(0, jewel.offsetY);
-                const jewelWidth = fingerWidth * jewel.scale;
-                const jewelHeight = jewelWidth * (jewel.image.height / jewel.image.width);
-                elements.ctx.drawImage(jewel.image, -jewelWidth / 2, -jewelHeight / 2, jewelWidth, jewelHeight);
-                elements.ctx.restore();
-            }
-        }
-        
+        function drawHandJewelry(hands) { if (!state.activeJewelId) return; const jewel = jewelryCatalog[state.activeJewelId]; if (!jewel || !jewel.loaded) return; for (const hand of hands) { const p1 = hand.keypoints[jewel.anchorPointIndex]; const p2 = hand.keypoints[jewel.anchorPointIndex + 1]; const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x); const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2)); elements.ctx.save(); elements.ctx.translate(p1.x, p1.y); elements.ctx.rotate(angle); elements.ctx.translate(0, jewel.offsetY); const jewelWidth = fingerWidth * jewel.scale; const jewelHeight = jewelWidth * (jewel.image.height / jewel.image.width); elements.ctx.drawImage(jewel.image, -jewelWidth / 2, -jewelHeight / 2, jewelWidth, jewelHeight); elements.ctx.restore(); } }
         function drawFaceLandmarks(faces) { const p = [172, 136, 150, 149, 176, 148, 152, 377, 400, 378, 379, 365, 397]; for (const face of faces) { for (const i of p) { const k = face.keypoints[i]; elements.ctx.fillStyle = '#FFFFFF'; elements.ctx.beginPath(); elements.ctx.arc(k.x, k.y, 4, 0, 2*Math.PI); elements.ctx.fill(); } } }
         
         initializeEventListeners();
+    });
     </script>
 </body>
 </html>
