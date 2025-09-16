@@ -94,15 +94,15 @@
         function drawRing(hands) {
             if (!ringLoaded) return;
             for (const hand of hands) {
-                const p1 = hand.keypoints[5];
-                const p2 = hand.keypoints[6];
+                const p1 = hand.keypoints[13];
+                const p2 = hand.keypoints[14];
 
                 const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) + Math.PI / 2;
                 const fingerWidth = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
                 
                 // --- ¡AJUSTE DE PRECISIÓN! ---
                 // Reducimos el factor de escala a 0.9 para un ajuste más fino.
-                const ringWidth = fingerWidth * 0.9;
+                const ringWidth = fingerWidth * 0.7;
                 // ---------------------------
 
                 const ringHeight = ringWidth * (ringImage.height / ringImage.width);
