@@ -15,6 +15,11 @@
         p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
         .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 20px 40px; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 8px; }
         #category-buttons { display: flex; gap: 20px; }
+        #ar-container { width: 100%; height: 100%; position: relative; padding: 0; }
+        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        #ar-video { display: none; }
+        #back-button { position: absolute; top: 20px; left: 20px; z-index: 120; background-color: rgba(24,21,22,0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        #back-button svg { width: 45%; height: 45%; fill: #D5B488; }
     </style>
 </head>
 <body>
@@ -23,7 +28,6 @@
         <h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p>
         <button id="start-button" class="cta-button">Empezar</button>
     </div>
-
     <div id="category-selector" class="page hidden">
         <img class="logo-image" src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
         <h1>Elige una categoría</h1>
@@ -32,43 +36,72 @@
             <button id="select-necklaces-btn" class="cta-button">Collares</button>
         </div>
     </div>
-    
     <div id="ar-container" class="page hidden">
-        <!-- Contenido de AR irá aquí -->
-        <p>La cámara se activaría aquí.</p>
+        <button id="back-button" title="Volver"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <video id="ar-video" playsinline autoplay muted></video>
+        <canvas id="ar-canvas"></canvas>
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const pages = {
-            splash: document.getElementById('splash-screen'),
-            category: document.getElementById('category-selector'),
-            ar: document.getElementById('ar-container')
-        };
-        const buttons = {
-            start: document.getElementById('start-button'),
-            selectRings: document.getElementById('select-rings-btn'),
-            selectNecklaces: document.getElementById('select-necklaces-btn')
-        };
+        const pages = { splash: document.getElementById('splash-screen'), category: document.getElementById('category-selector'), ar: document.getElementById('ar-container') };
+        const buttons = { start: document.getElementById('start-button'), selectRings: document.getElementById('select-rings-btn'), selectNecklaces: document.getElementById('select-necklaces-btn'), back: document.getElementById('back-button') };
+        const arElements = { video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d') };
+        let state = { currentStream: null, renderLoopId: null };
 
-        function switchPage(pageToShow) {
-            Object.values(pages).forEach(page => page.classList.add('hidden'));
-            pages[pageToShow].classList.remove('hidden');
+        function switchPage(pageToShow) { Object.values(pages).forEach(page => page.classList.add('hidden')); pages[pageToShow].classList.remove('hidden'); }
+
+        buttons.start.addEventListener('click', () => switchPage('category'));
+        buttons.selectRings.addEventListener('click', () => startArExperience('rings'));
+        buttons.selectNecklaces.addEventListener('click', () => startArExperience('necklaces'));
+        buttons.back.addEventListener('click', () => { stopArExperience(); switchPage('category'); });
+
+        async function startArExperience(mode) {
+            switchPage('ar');
+            const facingMode = (mode === 'rings') ? 'environment' : 'user';
+            try {
+                await setupCamera(facingMode);
+                renderLoop();
+                alert("Misión 3 Completada: La cámara correcta se ha iniciado. Ahora añadiremos la IA y la UI final.");
+            } catch (error) {
+                alert("Fallo al iniciar la cámara: " + error.message);
+                stopArExperience();
+                switchPage('category');
+            }
         }
 
-        buttons.start.addEventListener('click', () => {
-            switchPage('category');
-        });
-        
-        buttons.selectRings.addEventListener('click', () => {
-            switchPage('ar');
-            alert("Misión 2 Completada: El flujo de navegación funciona. Ahora añadiremos la cámara y la lógica de 'Anillos'.");
-        });
+        function stopArExperience() {
+            if (state.currentStream) {
+                state.currentStream.getTracks().forEach(track => track.stop());
+                state.currentStream = null;
+            }
+            if (state.renderLoopId) {
+                cancelAnimationFrame(state.renderLoopId);
+                state.renderLoopId = null;
+            }
+        }
 
-        buttons.selectNecklaces.addEventListener('click', () => {
-            switchPage('ar');
-            alert("Misión 2 Completada: El flujo de navegación funciona. Ahora añadiremos la cámara y la lógica de 'Collares'.");
-        });
+        async function setupCamera(facingMode) {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
+            state.currentStream = stream;
+            arElements.video.srcObject = stream;
+            await arElements.video.play();
+            arElements.canvas.width = arElements.video.videoWidth;
+            arElements.canvas.height = arElements.video.videoHeight;
+        }
+
+        function renderLoop() {
+            arElements.ctx.clearRect(0, 0, arElements.canvas.width, arElements.canvas.height);
+            arElements.ctx.save();
+            if (state.currentStream.getVideoTracks()[0].getSettings().facingMode === 'user') {
+                arElements.ctx.scale(-1, 1);
+                arElements.ctx.drawImage(arElements.video, -arElements.canvas.width, 0, arElements.canvas.width, arElements.canvas.height);
+            } else {
+                arElements.ctx.drawImage(arElements.video, 0, 0, arElements.canvas.width, arElements.canvas.height);
+            }
+            arElements.ctx.restore();
+            state.renderLoopId = requestAnimationFrame(renderLoop);
+        }
     });
     </script>
 </body>
