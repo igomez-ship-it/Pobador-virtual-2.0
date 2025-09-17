@@ -34,7 +34,6 @@
         <h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p>
         <button id="start-button" class="cta-button">Empezar</button>
     </div>
-
     <div id="category-selector" class="page hidden">
         <img class="logo-image" src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
         <h1>Elige una categoría</h1>
@@ -43,13 +42,11 @@
             <button id="select-necklaces-btn" class="cta-button">Collares</button>
         </div>
     </div>
-
     <div id="ar-container" class="page hidden">
         <button id="back-button" title="Volver"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
         <video id="ar-video" playsinline autoplay muted></video>
         <canvas id="ar-canvas"></canvas>
     </div>
-
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const pages = { splash: document.getElementById('splash-screen'), category: document.getElementById('category-selector'), ar: document.getElementById('ar-container') };
@@ -85,7 +82,7 @@
             if (arElements.video.paused) return;
             let detections = [];
             if (state.activeMode === 'rings' && state.handDetector) detections = await state.handDetector.estimateHands(arElements.video);
-            else if (state.activeMode === 'necklaces' && state.faceDetector) detections = await state.faceDetector.estimateFaces(arElements.video, {flipHorizontal: true});
+            else if (state.activeMode === 'necklaces' && state.faceDetector) detections = await state.faceDetector.estimateFaces(arElements.video, {flipHorizontal: false});
             state.lastDetections = detections;
         }
 
@@ -103,24 +100,29 @@
             arElements.ctx.restore();
             
             if (state.lastDetections.length > 0) {
-                if (state.activeMode === 'rings') { /* Lógica de anillos desactivada por ahora */ } 
+                if (state.activeMode === 'rings') { /* Lógica anillos pendiente */ } 
                 else if (state.activeMode === 'necklaces') drawNeckPoints(state.lastDetections);
             }
             requestAnimationFrame(renderLoop);
         }
 
-        // --- ¡FUNCIÓN RESTAURADA! ---
         function drawNeckPoints(faces) {
-            const neckAnchorPoints = [172, 148, 149, 150, 136, 137, 138, 139, 368, 367, 366, 365, 378, 379, 400, 397];
+            const neckLinePoints = [206, 205, 185, 409, 425, 426, 184, 183, 43, 83, 17, 313, 314, 315, 8, 316, 407, 408, 180, 195];
             for (const face of faces) {
-                for (const index of neckAnchorPoints) {
+                arElements.ctx.beginPath();
+                const firstPoint = face.keypoints[neckLinePoints[0]];
+                if(firstPoint) arElements.ctx.moveTo(firstPoint.x, firstPoint.y);
+                
+                for (const index of neckLinePoints) {
                     const kp = face.keypoints[index];
                     if (!kp) continue;
+                    arElements.ctx.lineTo(kp.x, kp.y);
                     arElements.ctx.fillStyle = '#D5B488';
-                    arElements.ctx.beginPath();
-                    arElements.ctx.arc(kp.x, kp.y, 4, 0, 2 * Math.PI);
-                    arElements.ctx.fill();
+                    arElements.ctx.fillRect(kp.x - 2, kp.y - 2, 4, 4);
                 }
+                arElements.ctx.strokeStyle = "rgba(213, 180, 136, 0.5)";
+                arElements.ctx.lineWidth = 2;
+                arElements.ctx.stroke();
             }
         }
     });
