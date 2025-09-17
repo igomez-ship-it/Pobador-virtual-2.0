@@ -109,7 +109,7 @@
 
         function drawNeckPoints(faces) {
             // Puntos clave de MediaPipe para el cuello y la clavícula, corregidos.
-            const neckLinePoints = [152];
+            const neckLinePoints = [147,152,401];
             const ctx = arElements.ctx;
             for (const face of faces) {
                 for (const index of neckLinePoints) {
