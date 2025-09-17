@@ -14,31 +14,29 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; }
-        .page { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: absolute; top: 0; left: 0; transition: opacity 0.5s ease, visibility 0s 0.5s; opacity: 1; visibility: visible; }
+        .page { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: absolute; top: 0; left: 0; transition: opacity 0.5s ease, visibility 0s 0.5s; opacity: 1; visibility: visible; padding: 20px; box-sizing: border-box; }
         .page.hidden { opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0s 0.5s; }
-        #splash-screen img, #category-selector img { max-width: 250px; margin-bottom: 2rem; }
+        .logo-image { max-width: 250px; margin-bottom: 2rem; }
         h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
         p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
         .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 20px 40px; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 8px; }
-        #category-buttons { display: flex; gap: 20px; }
+        #category-buttons { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; }
         #ar-container { width: 100%; height: 100%; position: relative; }
         #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         #ar-video { display: none; }
         #back-button { position: absolute; top: 20px; left: 20px; z-index: 120; background-color: rgba(24,21,22,0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
-        #back-button svg { width: 40%; height: 40%; fill: #D5B488; }
-        /* Aquí irían el resto de los estilos de la UI de AR que ya funcionan */
+        #back-button svg { width: 45%; height: 45%; fill: #D5B488; }
     </style>
 </head>
 <body>
     <div id="splash-screen" class="page">
-        <img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
-        <h1>Bienvenida</h1>
-        <p>Pruébate nuestras joyas virtualmente.</p>
+        <img class="logo-image" src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
+        <h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p>
         <button id="start-button" class="cta-button">Empezar</button>
     </div>
 
     <div id="category-selector" class="page hidden">
-        <img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
+        <img class="logo-image" src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
         <h1>Elige una categoría</h1>
         <div id="category-buttons">
             <button id="select-rings-btn" class="cta-button">Anillos</button>
@@ -50,114 +48,80 @@
         <button id="back-button" title="Volver"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
         <video id="ar-video" playsinline autoplay muted></video>
         <canvas id="ar-canvas"></canvas>
-        <!-- Aquí iría la UI de AR (selector de dedos, joyas, etc.) -->
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Referencias a Elementos ---
         const pages = { splash: document.getElementById('splash-screen'), category: document.getElementById('category-selector'), ar: document.getElementById('ar-container') };
         const buttons = { start: document.getElementById('start-button'), selectRings: document.getElementById('select-rings-btn'), selectNecklaces: document.getElementById('select-necklaces-btn'), back: document.getElementById('back-button') };
         const arElements = { video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d') };
-        
-        // --- Estado de la Aplicación ---
         let state = { handDetector: null, faceDetector: null, lastDetections: [], activeMode: null, detectionInterval: null, currentStream: null };
         
-        // --- Navegación ---
-        function switchPage(pageToShow) {
-            Object.values(pages).forEach(page => page.classList.add('hidden'));
-            pages[pageToShow].classList.remove('hidden');
-        }
+        function switchPage(pageToShow) { Object.values(pages).forEach(page => page.classList.add('hidden')); pages[pageToShow].classList.remove('hidden'); }
 
         buttons.start.addEventListener('click', () => switchPage('category'));
         buttons.selectRings.addEventListener('click', () => startArExperience('rings'));
         buttons.selectNecklaces.addEventListener('click', () => startArExperience('necklaces'));
-        buttons.back.addEventListener('click', () => {
-            stopArExperience();
-            switchPage('category');
-        });
+        buttons.back.addEventListener('click', () => { stopArExperience(); switchPage('category'); });
 
-        // --- Lógica de AR ---
         async function startArExperience(mode) {
             switchPage('ar');
             state.activeMode = mode;
             const facingMode = (mode === 'rings') ? 'environment' : 'user';
-
             try {
                 await setupCamera(facingMode);
-                if (mode === 'rings') {
-                    // Aquí iría la carga de imágenes de anillos y la UI de anillos
-                    if (!state.handDetector) state.handDetector = await createDetector('hand');
-                } else { // collares
-                    if (!state.faceDetector) state.faceDetector = await createDetector('face');
-                }
+                if (mode === 'rings' && !state.handDetector) state.handDetector = await createDetector('hand');
+                else if (mode === 'necklaces' && !state.faceDetector) state.faceDetector = await createDetector('face');
                 state.detectionInterval = setInterval(detect, 100);
                 renderLoop();
-            } catch (error) {
-                alert("No se pudo iniciar la cámara. Revisa los permisos.");
-                stopArExperience();
-                switchPage('category');
-            }
+            } catch (error) { alert("No se pudo iniciar la cámara."); stopArExperience(); switchPage('category'); }
         }
 
-        function stopArExperience() {
-            if (state.currentStream) {
-                state.currentStream.getTracks().forEach(track => track.stop());
-                state.currentStream = null;
-            }
-            if (state.detectionInterval) {
-                clearInterval(state.detectionInterval);
-                state.detectionInterval = null;
-            }
-            // Podríamos añadir aquí la cancelación del renderLoop si fuera necesario
-        }
-
-        async function setupCamera(facingMode) {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
-            state.currentStream = stream;
-            arElements.video.srcObject = stream;
-            await arElements.video.play();
-            arElements.canvas.width = arElements.video.videoWidth;
-            arElements.canvas.height = arElements.video.videoHeight;
-        }
-
-        async function createDetector(type) {
-             if (type === 'hand') {
-                const model = handPoseDetection.SupportedModels.MediaPipeHands;
-                const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' };
-                return handPoseDetection.createDetector(model, config);
-            } else { // face
-                const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
-                const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh', refineLandmarks: true };
-                return faceLandmarksDetection.createDetector(model, config);
-            }
-        }
+        function stopArExperience() { if (state.currentStream) { state.currentStream.getTracks().forEach(track => track.stop()); state.currentStream = null; } if (state.detectionInterval) { clearInterval(state.detectionInterval); state.detectionInterval = null; } }
+        async function setupCamera(facingMode) { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } }); state.currentStream = stream; arElements.video.srcObject = stream; await arElements.video.play(); arElements.canvas.width = arElements.video.videoWidth; arElements.canvas.height = arElements.video.videoHeight; }
+        async function createDetector(type) { if (type === 'hand') { const model = handPoseDetection.SupportedModels.MediaPipeHands; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return handPoseDetection.createDetector(model, config); } else { const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh', refineLandmarks: true }; return faceLandmarksDetection.createDetector(model, config); } }
         
         async function detect() {
             if (arElements.video.paused) return;
-            if (state.activeMode === 'rings' && state.handDetector) {
-                state.lastDetections = await state.handDetector.estimateHands(arElements.video);
-            } else if (state.activeMode === 'necklaces' && state.faceDetector) {
-                state.lastDetections = await state.faceDetector.estimateFaces(arElements.video);
-            }
+            let detections = [];
+            if (state.activeMode === 'rings' && state.handDetector) detections = await state.handDetector.estimateHands(arElements.video);
+            else if (state.activeMode === 'necklaces' && state.faceDetector) detections = await state.faceDetector.estimateFaces(arElements.video, {flipHorizontal: true});
+            state.lastDetections = detections;
         }
 
         function renderLoop() {
-            if (!state.currentStream) return; // Si no hay cámara, no dibujamos
+            if (!state.currentStream) { requestAnimationFrame(renderLoop); return; }
             arElements.ctx.clearRect(0, 0, arElements.canvas.width, arElements.canvas.height);
-            // ... (lógica de dibujo, espejado, etc.)
-            arElements.ctx.drawImage(arElements.video, 0, 0, arElements.canvas.width, arElements.canvas.height);
+            arElements.ctx.save();
+            const isFrontCamera = state.currentStream.getVideoTracks()[0].getSettings().facingMode === 'user';
+            if (isFrontCamera) {
+                arElements.ctx.scale(-1, 1);
+                arElements.ctx.drawImage(arElements.video, -arElements.canvas.width, 0, arElements.canvas.width, arElements.canvas.height);
+            } else {
+                arElements.ctx.drawImage(arElements.video, 0, 0, arElements.canvas.width, arElements.canvas.height);
+            }
+            arElements.ctx.restore();
             
             if (state.lastDetections.length > 0) {
-                if (state.activeMode === 'necklaces') {
-                    // Dibujar puntos del cuello
-                    for (const face of state.lastDetections) {
-                        // Lógica para dibujar puntos...
-                    }
-                }
-                // Aquí iría la lógica para dibujar anillos si estuviera activa
+                if (state.activeMode === 'rings') { /* Lógica de anillos desactivada por ahora */ } 
+                else if (state.activeMode === 'necklaces') drawNeckPoints(state.lastDetections);
             }
             requestAnimationFrame(renderLoop);
+        }
+
+        // --- ¡FUNCIÓN RESTAURADA! ---
+        function drawNeckPoints(faces) {
+            const neckAnchorPoints = [172, 148, 149, 150, 136, 137, 138, 139, 368, 367, 366, 365, 378, 379, 400, 397];
+            for (const face of faces) {
+                for (const index of neckAnchorPoints) {
+                    const kp = face.keypoints[index];
+                    if (!kp) continue;
+                    arElements.ctx.fillStyle = '#D5B488';
+                    arElements.ctx.beginPath();
+                    arElements.ctx.arc(kp.x, kp.y, 4, 0, 2 * Math.PI);
+                    arElements.ctx.fill();
+                }
+            }
         }
     });
     </script>
