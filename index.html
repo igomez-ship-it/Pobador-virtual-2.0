@@ -30,9 +30,7 @@
         #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         #back-button, #flip-camera-button { position: absolute; top: 20px; z-index: 120; background-color: rgba(24,21,22,0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
         #back-button { left: 20px; }
-        #flip-camera-button { right: 20px; }
         #back-button svg { width: 45%; height: 45%; fill: #D5B488; }
-        #flip-camera-button svg { width: 55%; height: 55%; fill: #D5B488; }
         #jewelry-selector-container { position: absolute; top: 50%; transform: translateY(-50%); transition: left 0.4s ease, right 0.4s ease; }
         #ui-container.ui-left #jewelry-selector-container { left: 20px; right: auto; }
         #ui-container.ui-right #jewelry-selector-container { right: 20px; left: auto; }
@@ -75,7 +73,7 @@
         <canvas id="ar-canvas"></canvas>
         <div id="ui-container" class="ui-left">
             <button id="back-button" class="ui-element" title="Volver"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
-            <button id="flip-camera-button" class="ui-element" title="Girar Cámara"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></button>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192zM432 160a24 24 0 1 1 0-48 24 24 0 1 1 0 48z"/></svg></button>
             <div id="jewelry-selector-container" class="ui-element"><button id="toggle-jewelry-button" class="jewel-select-button">Joyas</button><div id="jewelry-carousel"></div></div>
             <div id="finger-selector-container" class="ui-element">
                 <div id="hand-visual-selector">
