@@ -2,154 +2,45 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Probador Virtual [DEV] - Vernice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probador Virtual - Vernice</title>
     <link rel="icon" href="https://i.ibb.co/9FGjgr6/LOGOnegro-Original.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Montserrat', sans-serif; background-color: #181516; color: #FFFFFF; overflow: hidden; }
-        .page { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: absolute; top: 0; left: 0; transition: opacity 0.5s ease, visibility 0s 0.5s; opacity: 1; visibility: visible; padding: 20px; box-sizing: border-box; }
-        .page.hidden { opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0s 0.5s; }
-        .logo-image { max-width: 250px; margin-bottom: 2rem; }
-        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-        p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
+        #splash-screen { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
+        #splash-screen img { max-width: 250px; margin-bottom: 2rem; }
+        #splash-screen h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        #splash-screen p { font-size: 1.2rem; max-width: 400px; margin-bottom: 2.5rem; }
         .cta-button { background-color: #D5B488; color: #181516; border: none; padding: 20px 40px; font-size: 1.2rem; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 8px; }
-        #category-buttons { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; }
-        #ar-container { width: 100%; height: 100%; position: relative; }
-        #ar-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
-        #ar-video { display: none; }
-        #back-button { position: absolute; top: 20px; left: 20px; z-index: 120; background-color: rgba(24,21,22,0.7); border: 2px solid #D5B488; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
-        #back-button svg { width: 45%; height: 45%; fill: #D5B488; }
+        #ar-container { display: none; }
     </style>
 </head>
 <body>
-    <div id="splash-screen" class="page">
-        <img class="logo-image" src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
-        <h1>Bienvenida</h1><p>Pruébate nuestras joyas virtualmente.</p>
+    <div id="splash-screen">
+        <img src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
+        <h1>Bienvenida</h1>
+        <p>Pruébate nuestras joyas virtualmente con una experiencia en tiempo real.</p>
         <button id="start-button" class="cta-button">Empezar</button>
     </div>
-    <div id="category-selector" class="page hidden">
-        <img class="logo-image" src="https://i.ibb.co/tMbs4vmc/LOGOletrabl.png" alt="Logo de Vernice">
-        <h1>Elige una categoría</h1>
-        <div id="category-buttons">
-            <button id="select-rings-btn" class="cta-button">Anillos</button>
-            <button id="select-necklaces-btn" class="cta-button">Collares</button>
-        </div>
+    <div id="ar-container">
+        <!-- Vacío por ahora -->
     </div>
-    <div id="ar-container" class="page hidden">
-        <button id="back-button" title="Volver"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
-        <video id="ar-video" playsinline autoplay muted></video>
-        <canvas id="ar-canvas"></canvas>
-    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const pages = { splash: document.getElementById('splash-screen'), category: document.getElementById('category-selector'), ar: document.getElementById('ar-container') };
-        const buttons = { start: document.getElementById('start-button'), selectRings: document.getElementById('select-rings-btn'), selectNecklaces: document.getElementById('select-necklaces-btn'), back: document.getElementById('back-button') };
-        const arElements = { video: document.getElementById('ar-video'), canvas: document.getElementById('ar-canvas'), ctx: document.getElementById('ar-canvas').getContext('2d') };
-        let state = { handDetector: null, faceDetector: null, lastDetections: [], activeMode: null, detectionInterval: null, currentStream: null, activeJewelId: null };
-        
-        const jewelryCatalog = {
-            'necklace-1': { type: 'necklaces', imageUrl: 'https://i.ibb.co/mCNd3LXc/png-clipart-necklace-necklace.png', image: new Image(), loaded: false, scale: 1.8, offsetY: 80 },
-            'ring-1': { type: 'rings', imageUrl: 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png', image: new Image(), loaded: false, scale: 0.85 }
-        };
+        const startButton = document.getElementById('start-button');
+        const splashScreen = document.getElementById('splash-screen');
+        const arContainer = document.getElementById('ar-container');
 
-        function preloadImages() {
-            for(const id in jewelryCatalog) {
-                const jewel = jewelryCatalog[id];
-                jewel.image.crossOrigin = "anonymous";
-                jewel.image.src = jewel.imageUrl;
-                jewel.image.onload = () => { jewel.loaded = true; };
-            }
+        if (startButton) {
+            startButton.addEventListener('click', () => {
+                console.log("Botón Empezar funciona.");
+                splashScreen.style.display = 'none';
+                arContainer.style.display = 'block';
+                alert("Misión 1 Completada: La pantalla de inicio funciona. Ahora añadiremos la cámara.");
+            });
         }
-        
-        function switchPage(pageToShow) { Object.values(pages).forEach(page => page.classList.add('hidden')); pages[pageToShow].classList.remove('hidden'); }
-
-        buttons.start.addEventListener('click', () => switchPage('category'));
-        buttons.selectRings.addEventListener('click', () => startArExperience('rings'));
-        buttons.selectNecklaces.addEventListener('click', () => startArExperience('necklaces'));
-        buttons.back.addEventListener('click', () => { stopArExperience(); switchPage('category'); });
-
-        async function startArExperience(mode) {
-            switchPage('ar');
-            state.activeMode = mode;
-            state.activeJewelId = (mode === 'rings') ? 'ring-1' : 'necklace-1';
-            const facingMode = (mode === 'rings') ? 'environment' : 'user';
-            try {
-                await setupCamera(facingMode);
-                if (mode === 'rings' && !state.handDetector) state.handDetector = await createDetector('hand');
-                else if (mode === 'necklaces' && !state.faceDetector) state.faceDetector = await createDetector('face');
-                state.detectionInterval = setInterval(detect, 100);
-                renderLoop();
-            } catch (error) { alert("No se pudo iniciar la cámara."); stopArExperience(); switchPage('category'); }
-        }
-
-        function stopArExperience() { if (state.currentStream) { state.currentStream.getTracks().forEach(track => track.stop()); state.currentStream = null; } if (state.detectionInterval) { clearInterval(state.detectionInterval); state.detectionInterval = null; } }
-        async function setupCamera(facingMode) { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } }); state.currentStream = stream; arElements.video.srcObject = stream; await arElements.video.play(); arElements.canvas.width = arElements.video.videoWidth; arElements.canvas.height = arElements.video.videoHeight; }
-        async function createDetector(type) { if (type === 'hand') { const model = handPoseDetection.SupportedModels.MediaPipeHands; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands', modelType: 'full' }; return handPoseDetection.createDetector(model, config); } else { const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh; const config = { runtime: 'mediapipe', solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh', refineLandmarks: true }; return faceLandmarksDetection.createDetector(model, config); } }
-        
-        async function detect() {
-            if (arElements.video.paused) return;
-            let detections = [];
-            if (state.activeMode === 'rings' && state.handDetector) detections = await state.handDetector.estimateHands(arElements.video);
-            else if (state.activeMode === 'necklaces' && state.faceDetector) detections = await state.faceDetector.estimateFaces(arElements.video, {flipHorizontal: false});
-            state.lastDetections = detections;
-        }
-
-        function renderLoop() {
-            if (!state.currentStream) { requestAnimationFrame(renderLoop); return; }
-            const ctx = arElements.ctx;
-            ctx.clearRect(0, 0, arElements.canvas.width, arElements.canvas.height);
-            ctx.save();
-            const isFrontCamera = state.currentStream.getVideoTracks()[0].getSettings().facingMode === 'user';
-            if (isFrontCamera) { ctx.scale(-1, 1); ctx.drawImage(arElements.video, -arElements.canvas.width, 0, arElements.canvas.width, arElements.canvas.height);
-            } else { ctx.drawImage(arElements.video, 0, 0, arElements.canvas.width, arElements.canvas.height); }
-            ctx.restore();
-            
-            if (state.lastDetections.length > 0) {
-                if (state.activeMode === 'rings') drawRing(state.lastDetections);
-                else if (state.activeMode === 'necklaces') drawNecklace(state.lastDetections);
-            }
-            requestAnimationFrame(renderLoop);
-        }
-        
-        function drawRing(hands) { /* ... [lógica de dibujo de anillo que ya funciona] ... */ }
-
-        function drawNecklace(faces) {
-            if (!state.activeJewelId || !jewelryCatalog[state.activeJewelId] || !jewelryCatalog[state.activeJewelId].loaded) return;
-            const jewel = jewelryCatalog[state.activeJewelId];
-            for (const face of faces) {
-                const p1 = face.keypoints[147]; const p2 = face.keypoints[152]; const p3 = face.keypoints[401];
-                if (!p1 || !p2 || !p3) continue;
-                const midX = (p1.x + p3.x) / 2;
-                const midY = (p1.y + p3.y) / 2;
-                const faceWidth = Math.sqrt(Math.pow(p1.x - p3.x, 2) + Math.pow(p1.y - p3.y, 2));
-                const angle = Math.atan2(p3.y - p1.y, p3.x - p1.x);
-                const jewelWidth = faceWidth * jewel.scale;
-                const jewelHeight = jewelWidth * (jewel.image.height / jewel.image.width);
-                const offsetX = Math.sin(angle) * jewel.offsetY;
-                const offsetY = Math.cos(angle) * jewel.offsetY;
-                const finalX = arElements.canvas.width - (midX + offsetX); // Corregido para espejo
-                const finalY = midY + offsetY;
-                
-                arElements.ctx.save();
-                arElements.ctx.translate(finalX, finalY);
-                arElements.ctx.rotate(-angle); // Corregido para espejo
-                arElements.ctx.drawImage(jewel.image, -jewelWidth / 2, -jewelHeight / 2, jewelWidth, jewelHeight);
-                arElements.ctx.restore();
-            }
-        }
-
-        preloadImages();
-        buttons.start.addEventListener('click', () => switchPage('category'));
-        buttons.selectRings.addEventListener('click', () => startArExperience('rings'));
-        buttons.selectNecklaces.addEventListener('click', () => startArExperience('necklaces'));
-        buttons.back.addEventListener('click', () => { stopArExperience(); switchPage('category'); });
     });
     </script>
 </body>
