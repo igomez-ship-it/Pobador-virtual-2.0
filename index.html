@@ -46,7 +46,7 @@
         #finger-selector-container { display: none; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 200px; height: 150px; }
         #hand-visual-selector { width: 100%; height: 100%; background-image: url('https://i.ibb.co/hFhNxZGD/Untitled-1-Photoroom.png'); background-size: contain; background-repeat: no-repeat; background-position: center; position: relative; transition: transform 0.4s ease; }
         #ui-container.ui-right #hand-visual-selector { transform: scaleX(-1); }
-        .finger-hotspot { position: absolute; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s ease; width: 40px; height: 40px; }
+        .finger-hotspot { position: absolute; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s ease; width: 15px; height: 15px; }
         .finger-hotspot.active { border-color: #D5B488; background-color: rgba(213, 180, 136, 0.3); }
         .finger-hotspot[data-finger="thumb"]  { top: 90px; left: 15px; } .finger-hotspot[data-finger="index"]  { top: 30px; left: 50px; } .finger-hotspot[data-finger="middle"] { top: 10px; left: 85px; } .finger-hotspot[data-finger="ring"]   { top: 25px; left: 120px; } .finger-hotspot[data-finger="pinky"]  { top: 55px; left: 155px; }
     </style>
@@ -89,7 +89,7 @@
         
         const jewelryCatalog = {
             'ring-1': { type: 'rings', imageUrl: 'https://i.ibb.co/DP4VQ1dr/1-90-quilates-anillo-de-compromi-Photoroom.png', image: new Image(), loaded: false, scale: 0.85 },
-            'necklace-1': { type: 'necklaces', imageUrl: 'https://i.ibb.co/mCNd3LXc/png-clipart-necklace-necklace.png', image: new Image(), loaded: false, scale: 1.8, offsetY: 80 }
+            'necklace-1': { type: 'necklaces', imageUrl: 'https://i.ibb.co/MxwzxqMS/png-clipart-necklace-necklace-Photoroom.png', image: new Image(), loaded: false, scale: 1.8, offsetY: 80 }
         };
         const fingerMap = { index: 5, middle: 9, ring: 13, pinky: 17, thumb: 2 };
 
@@ -134,7 +134,7 @@
 
         async function detect() {
             if (arElements.video.paused) return; let detections = [];
-            if (state.activeMode === 'rings' && state.handDetector) { detections = await state.handDetector.estimateHands(arElements.video); if (detections.length > 0) arElements.uiContainer.className = (detections[0].handedness === 'Left') ? 'ui-right' : 'ui-left';
+            if (state.activeMode === 'rings' && state.handDetector) { detections = await state.handDetector.estimateHands(arElements.video); if (detections.length > 0) arElements.uiContainer.className = (detections[0].handedness === 'Right') ? 'ui-right' : 'ui-left';
             } else if (state.activeMode === 'necklaces' && state.faceDetector) { detections = await state.faceDetector.estimateFaces(arElements.video); }
             state.lastDetections = detections;
         }
